@@ -1,0 +1,240 @@
+name: CI
+
+# Ce workflow est destine a s'executer sur GitHub Actions (environnement
+# reseau standard). Il n'a PAS ete execute depuis l'environnement de
+# generation de ce projet : celui-ci bloque explicitement
+# `binaries.prisma.sh` (moteur Prisma) et `registry-1.docker.io` (images
+# Docker de base), deux domaines necessaires a une validation complete
+# (voir docs/development/prisma-runtime-blocker-proof.txt et
+# docker-build-attempt-proof.txt pour les preuves exactes de ce blocage).
+# Son statut reste donc INCONNU tant qu'il n'a pas tourne reellement sur
+# GitHub — voir docs/development/github-ci.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Toutes les valeurs ci-dessous sont des valeurs DE TEST explicites,
+# jamais utilisables en production : le schema Zod (config/env.schema.ts)
+# refuse categoriquement ces valeurs des que NODE_ENV=production (secret
+# de secours connu, longueur insuffisante, domaines .example/localhost...).
+env:
+  NODE_ENV: test
+  DATABASE_URL: postgresql://smc:smc_ci_password@localhost:5432/smc_ci?schema=public
+  DATABASE_URL_TEST: postgresql://smc:smc_ci_password@localhost:5432/smc_ci_test?schema=public
+  REDIS_URL: redis://localhost:6379
+  STORAGE_ENDPOINT: http://localhost:9000
+  STORAGE_REGION: eu-west-3
+  STORAGE_BUCKET: smc-ci
+  STORAGE_ACCESS_KEY_ID: smc_ci_access_key
+  STORAGE_SECRET_ACCESS_KEY: smc_ci_secret_key
+  SMTP_HOST: localhost
+  SMTP_PORT: 1025
+  SMTP_FROM: "SaveMyControllers CI <ci@savemycontrollers.example>"
+  ACCESS_TOKEN_SECRET: ci-only-access-token-secret-at-least-32-characters-long
+  CSRF_SECRET: ci-only-csrf-secret-at-least-32-characters-long-too
+  JWT_ISSUER: savemycontrollers
+  JWT_AUDIENCE: savemycontrollers-api
+  API_URL: http://localhost:3001
+  CORS_ALLOWED_ORIGINS: http://localhost:3000
+  PAYLOAD_ENCRYPTION_KEY: Y2ktb25seS0zMi1ieXRlLWtleS1mb3ItdGVzdHMtb25seSEh
+  TRUSTED_PROXY_COUNT: "0"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: smc
+          POSTGRES_PASSWORD: smc_ci_password
+          POSTGRES_DB: smc_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U smc -d smc_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      # MinIO retire de cette CI : aucune etape actuelle ne teste le
+      # stockage de fichiers (voir modules/files, non couvert par des
+      # tests d'integration a ce stade). Un service `services:` GitHub
+      # Actions ne permet pas de surcharger la commande de demarrage
+      # (`server /data`) sans image dediee ; le reintroduire proprement
+      # necessitera soit une image MinIO pre-configuree avec cette
+      # commande en ENTRYPOINT, soit une etape `docker run` explicite,
+      # au moment ou des tests reels en auront besoin.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Installation (lockfile fige)
+        run: pnpm install --frozen-lockfile
+
+      - name: Creation de la base de test dediee
+        run: PGPASSWORD=smc_ci_password psql -h localhost -U smc -d smc_ci -c "CREATE DATABASE smc_ci_test;"
+
+      - name: Formatage Prisma (echoue si le schema commite n'est pas deja formate)
+        run: |
+          pnpm --filter @smc/database exec prisma format --schema ../../prisma/schema.prisma
+          git diff --exit-code prisma/schema.prisma
+
+      - name: Validation du schema Prisma
+        run: pnpm db:validate
+
+      - name: Generation du client Prisma
+        run: pnpm db:generate
+
+      # --- Etape temporaire, a retirer des qu'une migration initiale est committee ---
+      # Tant qu'aucun fichier prisma/migrations/*/migration.sql n'existe
+      # dans le depot (cas actuel : la migration n'a jamais pu etre
+      # generee dans l'environnement de developpement sandbox, voir
+      # docs/development/prisma-runtime-blocker-proof.txt), cette etape la
+      # genere a la volee UNIQUEMENT pour permettre a la CI de progresser,
+      # et echoue explicitement pour rappeler qu'elle doit etre remplacee.
+      # Voir docs/development/github-ci.md section "Generer la premiere
+      # migration" pour la procedure definitive (generer en local avec
+      # acces reseau standard, committer le resultat, PUIS supprimer ce
+      # bloc et cette CI n'utilisera plus que `prisma migrate deploy`).
+      - name: "[TEMPORAIRE] Verifie qu'une migration initiale existe"
+        run: |
+          if [ -z "$(find prisma/migrations -maxdepth 1 -type d -not -path prisma/migrations 2>/dev/null)" ]; then
+            echo "::error::Aucune migration Prisma trouvee dans prisma/migrations/. Generez-la en local (pnpm --filter @smc/database exec prisma migrate dev --name initial) dans un environnement avec acces reseau standard, committez prisma/migrations/, puis supprimez cette etape temporaire (voir docs/development/github-ci.md)."
+            exit 1
+          fi
+
+      - name: Application de la migration (base principale)
+        run: pnpm db:migrate:deploy
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Application de la migration (base de test — utilisee par test:integration)
+        run: pnpm db:migrate:deploy
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL_TEST }}
+
+      - name: Seed (premiere execution)
+        run: pnpm db:seed
+
+      - name: Seed (seconde execution — verifie l'idempotence)
+        run: pnpm db:seed
+
+      - name: Lint (inclut le controle des frontieres de modules)
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Tests unitaires
+        run: pnpm test:unit
+
+      - name: Tests d'integration (PostgreSQL reel, DATABASE_URL_TEST obligatoire)
+        run: |
+          if [ -z "$DATABASE_URL_TEST" ]; then
+            echo "::error::DATABASE_URL_TEST est obligatoire en CI. Aucun test d'integration ne doit etre ignore silencieusement."
+            exit 1
+          fi
+          pnpm test:integration
+
+      - name: Build de tous les packages et applications
+        run: pnpm build
+
+      - name: Verifie que @smc/database expose bien ses declarations de types
+        run: test -f packages/database/dist/index.d.ts
+
+      - name: Verifie tous les points d'entree des packages construits
+        run: pnpm verify:entrypoints
+
+      - name: Generation OpenAPI
+        run: pnpm --filter @smc/api openapi:generate
+
+      - name: Generation du client API
+        run: pnpm --filter @smc/api-client generate
+
+      - name: Verification que les fichiers generes ne sont pas obsoletes
+        run: git diff --exit-code docs/api/openapi.json packages/api-client/src/generated
+
+      - name: Typecheck du client API genere
+        run: pnpm --filter @smc/api-client typecheck
+
+      - name: Demarrage de l'API compilee + appel HTTP reel sur /health
+        run: |
+          node apps/api/dist/main.js > api-startup.log 2>&1 &
+          echo $! > api.pid
+          for i in $(seq 1 20); do
+            if curl -sf http://localhost:3001/health > /tmp/health.json; then break; fi
+            sleep 1
+          done
+          cat /tmp/health.json
+          grep -q '"status":"ok"' /tmp/health.json
+          kill "$(cat api.pid)"
+
+      - name: Demarrage controle du worker compile (verifie l'absence d'erreur de bootstrap)
+        run: |
+          timeout 10s node apps/worker/dist/main.js > worker-startup.log 2>&1
+          status=$?
+          cat worker-startup.log
+          # 124 = timeout normal (le worker tourne en boucle, arret volontaire) ;
+          # tout autre code de sortie non nul indique une erreur de demarrage.
+          if [ "$status" -ne 124 ] && [ "$status" -ne 0 ]; then
+            echo "::error::Le worker s'est arrete de maniere inattendue (code $status)."
+            exit 1
+          fi
+          if grep -qi "error" worker-startup.log; then
+            echo "::warning::Le log de demarrage du worker contient le mot 'error', verifier manuellement."
+          fi
+
+      - name: Recherche de secrets dans le depot
+        run: |
+          ! grep -rniE "(AKIA[0-9A-Z]{16}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----|sk_live_|pk_live_)" --include="*.ts" --include="*.json" . || (echo "::error::Secret potentiel detecte" && exit 1)
+
+      - name: Audit des dependances de production
+        if: always()
+        run: pnpm audit --prod --json > audit-prod.json || true
+
+      - name: Audit complet (production + developpement, informatif)
+        if: always()
+        run: pnpm audit --json > audit-full.json || true
+
+      - name: Verification qu'aucune vulnerabilite critique de production ne subsiste
+        run: |
+          CRITICAL=$(python3 -c "import json; d=json.load(open('audit-prod.json')); print(d.get('metadata',{}).get('vulnerabilities',{}).get('critical',0))" 2>/dev/null || echo 0)
+          echo "Vulnerabilites critiques (prod): $CRITICAL"
+          test "$CRITICAL" = "0"
+
+      # --- Artefacts de diagnostic, conserves meme en cas d'echec ---
+      # Aucun de ces fichiers ne doit contenir de token/mot de passe/secret :
+      # les logs applicatifs redigent deja les champs sensibles (voir
+      # @smc/logger) et les variables d'environnement de cette CI sont
+      # exclusivement des valeurs de test sans valeur en production.
+      - name: Publication des artefacts de diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-diagnostics
+          retention-days: 14
+          path: |
+            audit-prod.json
+            audit-full.json
+            api-startup.log
+            worker-startup.log
+            docs/api/openapi.json
+            packages/api-client/src/generated/
+            apps/api/coverage/
+          if-no-files-found: ignore

@@ -1,0 +1,71 @@
+name: savemycontrollers
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: smc
+      POSTGRES_PASSWORD: smc_dev_password
+      POSTGRES_DB: smc_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - smc_postgres_data:/var/lib/postgresql/data
+      - ./infra/docker/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smc -d smc_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [smc_internal]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - smc_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [smc_internal]
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: smc_minio_access_key
+      MINIO_ROOT_PASSWORD: smc_minio_secret_key
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - smc_minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [smc_internal]
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # interface web
+    networks: [smc_internal]
+
+networks:
+  smc_internal:
+    driver: bridge
+
+volumes:
+  smc_postgres_data:
+  smc_redis_data:
+  smc_minio_data:

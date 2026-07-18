@@ -1,0 +1,30 @@
+{
+  "name": "@smc/worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:unit": "jest --config jest.config.cjs"
+  },
+  "dependencies": {
+    "@smc/database": "workspace:*",
+    "@smc/logger": "workspace:*",
+    "@smc/queue": "workspace:*",
+    "@smc/crypto": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.5",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "@smc/config-typescript": "workspace:*",
+    "@smc/eslint-config": "workspace:*",
+    "eslint": "^9.13.0",
+    "@types/jest": "^29.5.13"
+  }
+}

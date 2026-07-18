@@ -1,0 +1,25 @@
+Commande executee :
+  docker build -f infra/docker/web/Dockerfile -t smc-web:test .
+
+Resultat reel (daemon Docker demarre manuellement avec succes dans ce
+sandbox — dockerd repond a `docker info`, containerd operationnel) :
+
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  1.079GB
+Step 1/23 : FROM node:20-alpine AS base
+unknown: failed to resolve reference "docker.io/library/node:20-alpine":
+unexpected status from HEAD request to
+https://registry-1.docker.io/v2/library/node/manifests/20-alpine: 403 Forbidden
+
+Conclusion : le daemon Docker lui-meme fonctionne reellement dans ce
+sandbox (nouveau, confirme par `docker info` retournant "Server Version:
+29.1.3"), mais le registre Docker Hub (registry-1.docker.io) n'est pas
+dans la liste blanche reseau de l'environnement, ce qui empeche tout
+telechargement d'image de base, quelle qu'elle soit. Aucune image Docker
+ne peut donc etre construite ni demarree dans cet environnement precis,
+independamment de la question Prisma. Les Dockerfiles restent corrects et
+complets pour un environnement CI/CD standard disposant d'un acces reseau
+vers Docker Hub (ou un miroir prive).

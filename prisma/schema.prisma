@@ -1,0 +1,1310 @@
+// =============================================================================
+// SaveMyControllers — schema.prisma
+// Schema de reference. Toute entite est en UUID, toute date en UTC (le
+// datasource PostgreSQL "timestamptz" garantit cela), tout montant est un
+// entier en unite mineure (centimes) accompagne de sa devise.
+// Voir docs/adr/ADR-003, ADR-007, ADR-008, ADR-009.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------------------
+
+enum Currency {
+  EUR
+}
+
+enum PublishableStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum AccountType {
+  INDIVIDUAL
+  COMPANY_MEMBER
+  STAFF
+}
+
+enum AuditActorType {
+  USER
+  STAFF
+  SYSTEM
+}
+
+enum AuditResult {
+  SUCCESS
+  FAILURE
+}
+
+enum SettingValueType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+}
+
+enum FileVisibility {
+  PRIVATE
+  CLIENT
+  INTERNAL
+}
+
+enum FileRelatedEntityType {
+  ORDER
+  REPAIR_CASE
+  SUPPORT_TICKET
+  COMPANY
+  MEDIA_LIBRARY
+}
+
+enum MediaRelatedEntityType {
+  BRAND
+  DEVICE_MODEL
+  SERVICE
+  SERVICE_OPTION
+}
+
+enum ServiceCategoryKind {
+  REPAIR
+  CUSTOMIZATION
+  CLICK_MOUSE_MOD
+  BACK_PADDLES
+}
+
+enum CompanyStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum CompanyInternalRole {
+  OWNER
+  MANAGER
+  BUYER
+}
+
+enum ClientType {
+  STANDARD
+  PROFESSIONAL
+}
+
+enum RepairPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum NoteVisibility {
+  INTERNAL
+  CLIENT
+}
+
+enum OrderFinancialStatus {
+  AWAITING_PAYMENT
+  PAID
+  PARTIALLY_REFUNDED
+  REFUNDED
+  CANCELLED
+  EXPIRED
+}
+
+enum OrderOperationalStatus {
+  CREATED
+  AWAITING_SHIPMENT_FROM_CLIENT
+  IN_PROGRESS
+  PARTIALLY_SHIPPED
+  SHIPPED
+  DELIVERED
+  CLOSED
+  CANCELLED
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum ExtensionStatus {
+  REGISTERED
+  INSTALLED
+  ACTIVE
+  DISABLED
+  FAILED
+}
+
+// -----------------------------------------------------------------------------
+// IDENTITY
+// -----------------------------------------------------------------------------
+
+model User {
+  id String @db.Uuid @id @default(uuid())
+  email              String      @unique @db.VarChar(255)
+  passwordHash       String @map("password_hash")
+  firstName          String @db.VarChar(100) @map("first_name")
+  lastName           String @db.VarChar(100) @map("last_name")
+  accountType        AccountType @default(INDIVIDUAL) @map("account_type")
+  emailVerifiedAt DateTime? @db.Timestamptz(3) @map("email_verified_at")
+  isActive           Boolean @default(true) @map("is_active")
+  failedLoginAttempts Int @default(0) @map("failed_login_attempts")
+  lockedUntil DateTime? @db.Timestamptz(3) @map("locked_until")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+
+  sessions            Session[]
+  emailVerifications  EmailVerificationToken[]
+  passwordResets      PasswordResetToken[]
+  userRoles           UserRole[]
+  companyMemberships  CompanyMember[]
+  addresses           Address[]
+  carts               Cart[]
+  orders              Order[]
+  repairCasesAsClient RepairCase[] @relation("RepairCaseClient")
+  repairCasesAsTech   RepairCase[] @relation("RepairCaseTechnician")
+  repairNotes         RepairNote[]
+  auditLogs           AuditLog[]
+  uploadedFiles       FileAsset[]
+
+  @@index([accountType])
+  @@map("users")
+}
+
+model Session {
+  id String @db.Uuid @id @default(uuid())
+  userId String @db.Uuid @map("user_id")
+  familyId String @db.Uuid @map("family_id") // regroupe toutes les rotations d'une meme connexion initiale ; permet de revoquer toute la famille en cas de reutilisation detectee (voir ADR-014)
+  refreshTokenHash String @unique @map("refresh_token_hash")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  lastUsedAt DateTime @db.Timestamptz(3) @default(now()) @map("last_used_at")
+  expiresAt DateTime @db.Timestamptz(3) @map("expires_at")
+  revokedAt DateTime? @db.Timestamptz(3) @map("revoked_at")
+  revokedReason        String? @db.VarChar(60) @map("revoked_reason") // ex. "ROTATED", "LOGOUT", "REUSE_DETECTED", "USER_REVOKED_ALL"
+  replacedBySessionId String? @db.Uuid @map("replaced_by_session_id")
+  userAgent        String? @map("user_agent")
+  ipAddress        String? @map("ip_address")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("sessions")
+}
+
+model EmailVerificationToken {
+  id String @db.Uuid @id @default(uuid())
+  userId String @db.Uuid @map("user_id")
+  tokenHash  String @unique @map("token_hash")
+  expiresAt DateTime @db.Timestamptz(3) @map("expires_at")
+  consumedAt DateTime? @db.Timestamptz(3) @map("consumed_at")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+  id String @db.Uuid @id @default(uuid())
+  userId String @db.Uuid @map("user_id")
+  tokenHash  String @unique @map("token_hash")
+  expiresAt DateTime @db.Timestamptz(3) @map("expires_at")
+  consumedAt DateTime? @db.Timestamptz(3) @map("consumed_at")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// -----------------------------------------------------------------------------
+// AUTHORIZATION (RBAC — personnel SaveMyControllers uniquement)
+// -----------------------------------------------------------------------------
+
+model Permission {
+  id String @db.Uuid @id @default(uuid())
+  key         String   @unique // ex. "catalog.read" — cle stable, non renommable via l'admin
+  description String
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model Role {
+  id String @db.Uuid @id @default(uuid())
+  key       String   @unique // ex. "SUPER_ADMIN" — cle technique stable
+  label     String // libelle modifiable depuis l'administration
+  isSystem  Boolean @default(false) @map("is_system") // les roles systeme ne peuvent pas etre supprimes
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("roles")
+}
+
+model RolePermission {
+  roleId String @db.Uuid @map("role_id")
+  permissionId String @db.Uuid @map("permission_id")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId String @db.Uuid @map("user_id")
+  roleId String @db.Uuid @map("role_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+// -----------------------------------------------------------------------------
+// ORGANIZATIONS (comptes professionnels)
+// -----------------------------------------------------------------------------
+
+model Company {
+  id String @db.Uuid @id @default(uuid())
+  name      String
+  siret     String?
+  vatNumber String? @map("vat_number")
+  status    CompanyStatus @default(PENDING)
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+
+  members            CompanyMember[]
+  addresses          Address[]
+  orders             Order[]
+  carts              Cart[]
+  repairCases        RepairCase[]
+  pricingOverrides   CompanyPricingOverride[]
+  volumeDiscounts    VolumeDiscountRule[]
+
+  @@map("companies")
+}
+
+model CompanyMember {
+  id String @db.Uuid @id @default(uuid())
+  companyId String @db.Uuid @map("company_id")
+  userId String @db.Uuid @map("user_id")
+  internalRole CompanyInternalRole @default(BUYER) @map("internal_role")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, userId])
+  @@map("company_members")
+}
+
+model Address {
+  id String @db.Uuid @id @default(uuid())
+  userId String? @db.Uuid @map("user_id")
+  companyId String? @db.Uuid @map("company_id")
+  label             String?
+  recipientName     String @map("recipient_name")
+  line1             String
+  line2             String?
+  postalCode        String @map("postal_code")
+  city               String
+  country           String   @default("FR")
+  phone             String?
+  isDefaultBilling  Boolean @default(false) @map("is_default_billing")
+  isDefaultShipping Boolean @default(false) @map("is_default_shipping")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  ordersBilling  Order[] @relation("OrderBillingAddress")
+  ordersShipping Order[] @relation("OrderShippingAddress")
+
+  @@index([userId])
+  @@index([companyId])
+  @@map("addresses")
+}
+
+// -----------------------------------------------------------------------------
+// AUDIT (append-only)
+// -----------------------------------------------------------------------------
+
+model AuditLog {
+  id String @db.Uuid @id @default(uuid())
+  occurredAt DateTime @db.Timestamptz(3) @default(now()) @map("occurred_at")
+  actorUserId String? @db.Uuid @map("actor_user_id")
+  actorType     AuditActorType @map("actor_type")
+  action        String // ex. "repair_case.status_changed"
+  resourceType  String @map("resource_type")
+  resourceId String? @db.Uuid @map("resource_id")
+  result        AuditResult
+  ipAddress     String? @map("ip_address")
+  userAgent     String? @map("user_agent")
+  correlationId String @db.Uuid @map("correlation_id")
+  beforeData    Json? @map("before_data")
+  afterData     Json? @map("after_data")
+
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([resourceType, resourceId])
+  @@index([actorUserId])
+  @@index([occurredAt])
+  @@map("audit_logs")
+}
+
+// -----------------------------------------------------------------------------
+// SETTINGS
+// -----------------------------------------------------------------------------
+
+model Setting {
+  key             String           @id
+  valueType       SettingValueType @map("value_type")
+  valueString     String? @map("value_string")
+  valueNumber     Float? @map("value_number")
+  valueBoolean    Boolean? @map("value_boolean")
+  valueJson       Json? @map("value_json")
+  isSecretRef     Boolean @default(false) @map("is_secret_ref") // true = la valeur reelle vit hors base (gestionnaire de secrets), ce champ ne stocke qu'une reference
+  isPublic        Boolean @default(false) @map("is_public") // true = lisible par le frontend public sans authentification
+  description     String?
+  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+  updatedByUserId String? @db.Uuid @map("updated_by_user_id")
+
+  history SettingHistory[]
+
+  @@map("settings")
+}
+
+model SettingHistory {
+  id String @db.Uuid @id @default(uuid())
+  settingKey      String @map("setting_key")
+  oldValueJson    Json? @map("old_value_json")
+  newValueJson    Json? @map("new_value_json")
+  changedAt DateTime @db.Timestamptz(3) @default(now()) @map("changed_at")
+  changedByUserId String? @db.Uuid @map("changed_by_user_id")
+
+  setting Setting @relation(fields: [settingKey], references: [key], onDelete: Cascade)
+
+  @@index([settingKey])
+  @@map("setting_history")
+}
+
+// -----------------------------------------------------------------------------
+// FILES
+// -----------------------------------------------------------------------------
+
+model FileAsset {
+  id String @db.Uuid @id @default(uuid())
+  storageKey         String @unique @map("storage_key")
+  originalFileName   String @map("original_file_name")
+  mimeType           String @map("mime_type")
+  sizeBytes          Int @map("size_bytes")
+  visibility         FileVisibility
+  uploadedByUserId String? @db.Uuid @map("uploaded_by_user_id")
+  relatedEntityType  FileRelatedEntityType? @map("related_entity_type")
+  relatedEntityId String? @db.Uuid @map("related_entity_id")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  uploadedBy User? @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  mediaAssets   MediaAsset[]
+  repairFiles   RepairCaseFile[]
+  brandsAsLogo  Brand[]
+
+  @@index([relatedEntityType, relatedEntityId])
+  @@map("file_assets")
+}
+
+// -----------------------------------------------------------------------------
+// CATALOG
+// -----------------------------------------------------------------------------
+
+model Brand {
+  id String @db.Uuid @id @default(uuid())
+  slug             String            @unique
+  name             String
+  status           PublishableStatus @default(DRAFT)
+  displayOrder     Int @default(0) @map("display_order")
+  shortDescription String? @map("short_description")
+  longDescription  String? @map("long_description")
+  logoFileId String? @db.Uuid @map("logo_file_id")
+  seoTitle         String? @map("seo_title")
+  seoDescription   String? @map("seo_description")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+
+  logoFile FileAsset? @relation(fields: [logoFileId], references: [id], onDelete: SetNull)
+  families ProductFamily[]
+
+  @@map("brands")
+}
+
+model ProductFamily {
+  id String @db.Uuid @id @default(uuid())
+  brandId String @db.Uuid @map("brand_id")
+  slug             String
+  name             String
+  status           PublishableStatus @default(DRAFT)
+  displayOrder     Int @default(0) @map("display_order")
+  shortDescription String? @map("short_description")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+
+  brand        Brand         @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  deviceModels DeviceModel[]
+
+  compatibilityRules CompatibilityRule[]
+  pricingRules       PricingRule[]
+  leadTimeRules      LeadTimeRule[]
+
+  @@unique([brandId, slug])
+  @@map("product_families")
+}
+
+model DeviceModel {
+  id String @db.Uuid @id @default(uuid())
+  familyId String @db.Uuid @map("family_id")
+  slug             String
+  name             String
+  status           PublishableStatus @default(DRAFT)
+  displayOrder     Int @default(0) @map("display_order")
+  shortDescription String? @map("short_description")
+  longDescription  String? @map("long_description")
+  seoTitle         String? @map("seo_title")
+  seoDescription   String? @map("seo_description")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+
+  family   ProductFamily   @relation(fields: [familyId], references: [id], onDelete: Restrict)
+  variants DeviceVariant[]
+
+  compatibilityRules CompatibilityRule[]
+  pricingRules       PricingRule[]
+  leadTimeRules      LeadTimeRule[]
+  repairCases        RepairCase[]
+  cartItems          CartItem[]
+
+  @@unique([familyId, slug])
+  @@map("device_models")
+}
+
+model DeviceVariant {
+  id String @db.Uuid @id @default(uuid())
+  deviceModelId String @db.Uuid @map("device_model_id")
+  name         String
+  status       PublishableStatus @default(DRAFT)
+  displayOrder Int @default(0) @map("display_order")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+
+  deviceModel DeviceModel        @relation(fields: [deviceModelId], references: [id], onDelete: Restrict)
+  revisions   HardwareRevision[]
+
+  compatibilityRules CompatibilityRule[]
+  pricingRules       PricingRule[]
+  repairCases        RepairCase[]
+  cartItems          CartItem[]
+
+  @@map("device_variants")
+}
+
+model HardwareRevision {
+  id String @db.Uuid @id @default(uuid())
+  deviceVariantId String @db.Uuid @map("device_variant_id")
+  code            String
+  label           String
+  notes           String?
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  deviceVariant DeviceVariant @relation(fields: [deviceVariantId], references: [id], onDelete: Restrict)
+
+  compatibilityRules CompatibilityRule[]
+  repairCases        RepairCase[]
+  cartItems          CartItem[]
+
+  @@unique([deviceVariantId, code])
+  @@map("hardware_revisions")
+}
+
+model ServiceCategory {
+  id String @db.Uuid @id @default(uuid())
+  slug         String              @unique
+  name         String
+  kind         ServiceCategoryKind
+  displayOrder Int @default(0) @map("display_order")
+  status       PublishableStatus   @default(DRAFT)
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  services Service[]
+
+  @@map("service_categories")
+}
+
+model Service {
+  id String @db.Uuid @id @default(uuid())
+  categoryId String @db.Uuid @map("category_id")
+  slug                   String            @unique
+  name                   String
+  status                 PublishableStatus @default(DRAFT)
+  displayOrder           Int @default(0) @map("display_order")
+  shortDescription       String? @map("short_description")
+  longDescription        String? @map("long_description")
+  basePriceMinor         Int @map("base_price_minor")
+  currency               Currency          @default(EUR)
+  seoTitle               String? @map("seo_title")
+  seoDescription         String? @map("seo_description")
+  defaultWarrantyPolicyId String? @db.Uuid @map("default_warranty_policy_id")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+
+  category             ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  defaultWarrantyPolicy WarrantyPolicy? @relation(fields: [defaultWarrantyPolicyId], references: [id], onDelete: SetNull)
+
+  options ServiceOption[]
+  packItems ServicePackItem[]
+  partRequirements ServicePartRequirement[]
+
+  compatibilityRules CompatibilityRule[]
+  requirementsAsSource RequirementRule[] @relation("RequirementSource")
+  requirementsAsTarget RequirementRule[] @relation("RequirementTarget")
+  exclusionsAsA       ExclusionRule[]    @relation("ExclusionServiceA")
+  exclusionsAsB       ExclusionRule[]    @relation("ExclusionServiceB")
+  recommendationsAsSource RecommendationRule[] @relation("RecommendationSource")
+  recommendationsAsTarget RecommendationRule[] @relation("RecommendationTarget")
+  pricingRules        PricingRule[]
+  volumeDiscountRules VolumeDiscountRule[]
+  companyOverrides    CompanyPricingOverride[]
+  leadTimeRules       LeadTimeRule[]
+  orderItemServiceSnapshots OrderItemServiceSnapshot[]
+  cartItemServices CartItemService[]
+
+  @@index([categoryId])
+  @@map("services")
+}
+
+model ServiceOption {
+  id String @db.Uuid @id @default(uuid())
+  serviceId String @db.Uuid @map("service_id")
+  slug            String
+  name            String
+  status          PublishableStatus @default(DRAFT)
+  displayOrder    Int @default(0) @map("display_order")
+  extraPriceMinor Int @default(0) @map("extra_price_minor")
+  currency        Currency          @default(EUR)
+  isRequired      Boolean @default(false) @map("is_required")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  orderItemOptionSnapshots OrderItemOptionSnapshot[]
+  cartItemOptions CartItemOption[]
+
+  @@unique([serviceId, slug])
+  @@map("service_options")
+}
+
+model ServicePack {
+  id String @db.Uuid @id @default(uuid())
+  slug         String            @unique
+  name         String
+  status       PublishableStatus @default(DRAFT)
+  displayOrder Int @default(0) @map("display_order")
+  priceMinor   Int? @map("price_minor")
+  currency     Currency          @default(EUR)
+  isCumulativeWithDiscounts Boolean @default(false) @map("is_cumulative_with_discounts")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  items ServicePackItem[]
+
+  @@map("service_packs")
+}
+
+model ServicePackItem {
+  id String @db.Uuid @id @default(uuid())
+  servicePackId String @db.Uuid @map("service_pack_id")
+  serviceId String @db.Uuid @map("service_id")
+
+  servicePack ServicePack @relation(fields: [servicePackId], references: [id], onDelete: Cascade)
+  service     Service     @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@unique([servicePackId, serviceId])
+  @@map("service_pack_items")
+}
+
+model Supplier {
+  id String @db.Uuid @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  notes     String?
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  parts Part[]
+
+  @@map("suppliers")
+}
+
+model Part {
+  id String @db.Uuid @id @default(uuid())
+  sku               String   @unique @db.VarChar(80)
+  name              String
+  supplierId String? @db.Uuid @map("supplier_id")
+  purchaseCostMinor Int @map("purchase_cost_minor")
+  currency          Currency @default(EUR)
+  minStockThreshold Int @default(0) @map("min_stock_threshold")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+
+  supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  variants PartVariant[]
+
+  serviceRequirements ServicePartRequirement[]
+  compatibilityRules  CompatibilityRule[]
+
+  @@map("parts")
+}
+
+model PartVariant {
+  id String @db.Uuid @id @default(uuid())
+  partId String @db.Uuid @map("part_id")
+  name               String
+  sku                String   @unique
+  additionalCostMinor Int @default(0) @map("additional_cost_minor")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  part Part @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@map("part_variants")
+}
+
+model MediaAsset {
+  id String @db.Uuid @id @default(uuid())
+  fileId String @db.Uuid @map("file_id")
+  relatedEntityType MediaRelatedEntityType @map("related_entity_type")
+  relatedEntityId String @db.Uuid @map("related_entity_id")
+  altText           String? @map("alt_text")
+  displayOrder      Int @default(0) @map("display_order")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  file FileAsset @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([relatedEntityType, relatedEntityId])
+  @@map("media_assets")
+}
+
+model WarrantyPolicy {
+  id String @db.Uuid @id @default(uuid())
+  name         String
+  durationDays Int @map("duration_days")
+  exclusions   String?
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  servicesUsingAsDefault Service[]
+  warrantyClaims         WarrantyClaim[]
+
+  @@map("warranty_policies")
+}
+
+// -----------------------------------------------------------------------------
+// CONFIGURATOR (regles pilotees par les donnees)
+// -----------------------------------------------------------------------------
+
+// Liste blanche : un service n'est proposable que dans le perimetre defini
+// (famille / modele / variante / revision). Si aucune regle n'existe pour un
+// service, il est considere compatible avec tout le catalogue (comportement
+// documente et testé).
+model CompatibilityRule {
+  id String @db.Uuid @id @default(uuid())
+  serviceId String @db.Uuid @map("service_id")
+  productFamilyId String? @db.Uuid @map("product_family_id")
+  deviceModelId String? @db.Uuid @map("device_model_id")
+  deviceVariantId String? @db.Uuid @map("device_variant_id")
+  hardwareRevisionId String? @db.Uuid @map("hardware_revision_id")
+  partId String? @db.Uuid @map("part_id")
+  note               String?
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  service          Service           @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  productFamily    ProductFamily?    @relation(fields: [productFamilyId], references: [id], onDelete: Cascade)
+  deviceModel      DeviceModel?      @relation(fields: [deviceModelId], references: [id], onDelete: Cascade)
+  deviceVariant    DeviceVariant?    @relation(fields: [deviceVariantId], references: [id], onDelete: Cascade)
+  hardwareRevision HardwareRevision? @relation(fields: [hardwareRevisionId], references: [id], onDelete: Cascade)
+  part             Part?             @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId])
+  @@map("compatibility_rules")
+}
+
+// serviceId ne peut etre selectionne que si requiredServiceId est deja
+// selectionne (dependance obligatoire).
+model RequirementRule {
+  id String @db.Uuid @id @default(uuid())
+  serviceId String @db.Uuid @map("service_id")
+  requiredServiceId String @db.Uuid @map("required_service_id")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  service         Service @relation("RequirementSource", fields: [serviceId], references: [id], onDelete: Cascade)
+  requiredService Service @relation("RequirementTarget", fields: [requiredServiceId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, requiredServiceId])
+  @@map("requirement_rules")
+}
+
+// serviceAId et serviceBId ne peuvent jamais etre selectionnes ensemble.
+model ExclusionRule {
+  id String @db.Uuid @id @default(uuid())
+  serviceAId String @db.Uuid @map("service_a_id")
+  serviceBId String @db.Uuid @map("service_b_id")
+  reason      String?
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  serviceA Service @relation("ExclusionServiceA", fields: [serviceAId], references: [id], onDelete: Cascade)
+  serviceB Service @relation("ExclusionServiceB", fields: [serviceBId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceAId, serviceBId])
+  @@map("exclusion_rules")
+}
+
+// Suggestion non bloquante : si serviceId est selectionne, on recommande
+// recommendedServiceId.
+model RecommendationRule {
+  id String @db.Uuid @id @default(uuid())
+  serviceId String @db.Uuid @map("service_id")
+  recommendedServiceId String @db.Uuid @map("recommended_service_id")
+  message               String
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  service            Service @relation("RecommendationSource", fields: [serviceId], references: [id], onDelete: Cascade)
+  recommendedService Service @relation("RecommendationTarget", fields: [recommendedServiceId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, recommendedServiceId])
+  @@map("recommendation_rules")
+}
+
+// Prix specifique d'un service selon le perimetre (famille/modele/variante)
+// et le type de client. Priorite de resolution : voir ADR/documentation
+// configurator (specifique > standard, entreprise > professionnel > public).
+model PricingRule {
+  id String @db.Uuid @id @default(uuid())
+  serviceId String @db.Uuid @map("service_id")
+  productFamilyId String? @db.Uuid @map("product_family_id")
+  deviceModelId String? @db.Uuid @map("device_model_id")
+  deviceVariantId String? @db.Uuid @map("device_variant_id")
+  clientType        ClientType @default(STANDARD) @map("client_type")
+  amountMinor       Int @map("amount_minor")
+  currency          Currency   @default(EUR)
+  validFrom DateTime? @db.Timestamptz(3) @map("valid_from")
+  validUntil DateTime? @db.Timestamptz(3) @map("valid_until")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  service       Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  productFamily ProductFamily? @relation(fields: [productFamilyId], references: [id], onDelete: Cascade)
+  deviceModel   DeviceModel?   @relation(fields: [deviceModelId], references: [id], onDelete: Cascade)
+  deviceVariant DeviceVariant? @relation(fields: [deviceVariantId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId, clientType])
+  @@map("pricing_rules")
+}
+
+// Remise par palier de quantite, globale ou restreinte a un service/entreprise.
+model VolumeDiscountRule {
+  id String @db.Uuid @id @default(uuid())
+  serviceId String? @db.Uuid @map("service_id")
+  companyId String? @db.Uuid @map("company_id")
+  minQuantity            Int @map("min_quantity")
+  discountBasisPoints    Int @map("discount_basis_points") // ex. 1000 = 10,00 %
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  service Service? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("volume_discount_rules")
+}
+
+// Tarif negocie specifique a une entreprise, prioritaire sur PricingRule.
+model CompanyPricingOverride {
+  id String @db.Uuid @id @default(uuid())
+  companyId String @db.Uuid @map("company_id")
+  serviceId String @db.Uuid @map("service_id")
+  amountMinor Int @map("amount_minor")
+  currency    Currency @default(EUR)
+  validFrom DateTime? @db.Timestamptz(3) @map("valid_from")
+  validUntil DateTime? @db.Timestamptz(3) @map("valid_until")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, serviceId])
+  @@map("company_pricing_overrides")
+}
+
+model LeadTimeRule {
+  id String @db.Uuid @id @default(uuid())
+  serviceId String @db.Uuid @map("service_id")
+  productFamilyId String? @db.Uuid @map("product_family_id")
+  deviceModelId String? @db.Uuid @map("device_model_id")
+  minDays         Int @map("min_days")
+  maxDays         Int @map("max_days")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  service       Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  productFamily ProductFamily? @relation(fields: [productFamilyId], references: [id], onDelete: Cascade)
+  deviceModel   DeviceModel?   @relation(fields: [deviceModelId], references: [id], onDelete: Cascade)
+
+  @@map("lead_time_rules")
+}
+
+// Une prestation consomme automatiquement une ou plusieurs pieces.
+model ServicePartRequirement {
+  id String @db.Uuid @id @default(uuid())
+  serviceId String @db.Uuid @map("service_id")
+  partId String @db.Uuid @map("part_id")
+  quantity  Int     @default(1)
+  optional  Boolean @default(false)
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  part    Part    @relation(fields: [partId], references: [id], onDelete: Restrict)
+
+  @@unique([serviceId, partId])
+  @@map("service_part_requirements")
+}
+
+// -----------------------------------------------------------------------------
+// ORDERS
+// -----------------------------------------------------------------------------
+
+model Cart {
+  id String @db.Uuid @id @default(uuid())
+  userId String? @db.Uuid @map("user_id")
+  companyId String? @db.Uuid @map("company_id")
+  guestTokenHash   String? @unique @map("guest_token_hash") // panier invite : seul le hash du jeton opaque est stocke (voir ADR-015), jamais le jeton brut
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  expiresAt DateTime? @db.Timestamptz(3) @map("expires_at")
+  convertedAt DateTime? @db.Timestamptz(3) @map("converted_at")
+  convertedToOrderId String? @db.Uuid @unique @map("converted_to_order_id")
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  items   CartItem[]
+
+  @@index([userId])
+  @@map("carts")
+}
+
+model CartItem {
+  id String @db.Uuid @id @default(uuid())
+  cartId String @db.Uuid @map("cart_id")
+  deviceModelId String @db.Uuid @map("device_model_id")
+  deviceVariantId String @db.Uuid @map("device_variant_id")
+  hardwareRevisionId String? @db.Uuid @map("hardware_revision_id")
+  reportedIssue      String? @map("reported_issue")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  cart    Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  deviceModel DeviceModel @relation(fields: [deviceModelId], references: [id], onDelete: Restrict)
+  deviceVariant DeviceVariant @relation(fields: [deviceVariantId], references: [id], onDelete: Restrict)
+  hardwareRevision HardwareRevision? @relation(fields: [hardwareRevisionId], references: [id], onDelete: SetNull)
+  services CartItemService[]
+  options  CartItemOption[]
+
+  @@index([cartId])
+  @@index([deviceModelId])
+  @@map("cart_items")
+}
+
+model CartItemService {
+  cartItemId String @db.Uuid @map("cart_item_id")
+  serviceId String @db.Uuid @map("service_id")
+
+  cartItem CartItem @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
+  service  Service  @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@id([cartItemId, serviceId])
+  @@map("cart_item_services")
+}
+
+model CartItemOption {
+  cartItemId String @db.Uuid @map("cart_item_id")
+  serviceOptionId String @db.Uuid @map("service_option_id")
+
+  cartItem CartItem @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
+  serviceOption ServiceOption @relation(fields: [serviceOptionId], references: [id], onDelete: Restrict)
+
+  @@id([cartItemId, serviceOptionId])
+  @@map("cart_item_options")
+}
+
+model Order {
+  id String @db.Uuid @id @default(uuid())
+  reference        String               @unique @db.VarChar(30) // ex. SMC-2026-000123
+  userId String? @db.Uuid @map("user_id")
+  companyId String? @db.Uuid @map("company_id")
+  financialStatus  OrderFinancialStatus @default(AWAITING_PAYMENT) @map("financial_status")
+  operationalStatus OrderOperationalStatus @default(CREATED) @map("operational_status") // distinct du statut financier : n'est jamais melange avec PAID/REFUNDED etc.
+  billingAddressId String? @db.Uuid @map("billing_address_id") // conserve uniquement pour tracabilite ; les documents utilisent l'instantane ci-dessous, jamais cette reference (l'adresse source peut etre modifiee ou supprimee ensuite)
+  shippingAddressId String? @db.Uuid @map("shipping_address_id")
+  billingRecipientName   String @db.VarChar(200) @map("billing_recipient_name")
+  billingCompanyName     String? @db.VarChar(200) @map("billing_company_name")
+  billingLine1           String @db.VarChar(255) @map("billing_line1")
+  billingLine2           String? @db.VarChar(255) @map("billing_line2")
+  billingPostalCode      String @db.VarChar(20) @map("billing_postal_code")
+  billingCity            String @db.VarChar(120) @map("billing_city")
+  billingCountry         String @db.VarChar(2) @map("billing_country")
+  billingPhone           String? @db.VarChar(30) @map("billing_phone")
+  shippingRecipientName  String @db.VarChar(200) @map("shipping_recipient_name")
+  shippingCompanyName    String? @db.VarChar(200) @map("shipping_company_name")
+  shippingLine1          String @db.VarChar(255) @map("shipping_line1")
+  shippingLine2          String? @db.VarChar(255) @map("shipping_line2")
+  shippingPostalCode     String @db.VarChar(20) @map("shipping_postal_code")
+  shippingCity           String @db.VarChar(120) @map("shipping_city")
+  shippingCountry        String @db.VarChar(2) @map("shipping_country")
+  shippingPhone          String? @db.VarChar(30) @map("shipping_phone")
+  subtotalMinor    Int @map("subtotal_minor")
+  discountMinor    Int @default(0) @map("discount_minor")
+  taxMinor         Int @map("tax_minor")
+  shippingFeeMinor Int @default(0) @map("shipping_fee_minor")
+  totalMinor       Int @map("total_minor")
+  currency         Currency @default(EUR)
+  cancelledAt DateTime? @db.Timestamptz(3) @map("cancelled_at")
+  expiresAt DateTime? @db.Timestamptz(3) @map("expires_at")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  company         Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  billingAddress  Address?  @relation("OrderBillingAddress", fields: [billingAddressId], references: [id], onDelete: SetNull)
+  shippingAddress Address?  @relation("OrderShippingAddress", fields: [shippingAddressId], references: [id], onDelete: SetNull)
+
+  items       OrderItem[]
+  repairCases RepairCase[]
+  statusHistory OrderStatusHistory[]
+
+  @@index([userId])
+  @@index([companyId])
+  @@map("orders")
+}
+
+// Historique du statut OPERATIONNEL de la commande (prepation, expedition...),
+// distinct du statut financier (paiement/remboursement). Chaque entree
+// journalise l'acteur (utilisateur ou "SYSTEM" pour une transition
+// automatique) et un commentaire optionnel.
+model OrderStatusHistory {
+  id              String   @id @default(uuid()) @db.Uuid
+  orderId         String @db.Uuid @map("order_id")
+  status          OrderOperationalStatus
+  changedAt       DateTime @default(now()) @db.Timestamptz(3) @map("changed_at")
+  changedByUserId String? @db.Uuid @map("changed_by_user_id")
+  changedBySystem Boolean @default(false) @map("changed_by_system")
+  comment         String?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_status_history")
+}
+
+// Instantane immuable au moment de la commande : une evolution ulterieure du
+// catalogue ou des prix ne doit jamais alterer une commande existante.
+model OrderItem {
+  id String @db.Uuid @id @default(uuid())
+  orderId String @db.Uuid @map("order_id")
+  deviceModelId String @db.Uuid @map("device_model_id")
+  deviceVariantId String @db.Uuid @map("device_variant_id")
+  hardwareRevisionId String? @db.Uuid @map("hardware_revision_id")
+  deviceModelNameSnapshot     String @map("device_model_name_snapshot")
+  deviceVariantNameSnapshot   String @map("device_variant_name_snapshot")
+  hardwareRevisionLabelSnapshot String? @map("hardware_revision_label_snapshot")
+  reportedIssueSnapshot       String? @map("reported_issue_snapshot")
+  unitPriceMinorSnapshot      Int @map("unit_price_minor_snapshot")
+  discountMinorSnapshot       Int @default(0) @map("discount_minor_snapshot")
+  taxRateBasisPointsSnapshot  Int @map("tax_rate_basis_points_snapshot")
+  taxAmountMinorSnapshot      Int @map("tax_amount_minor_snapshot")
+  totalMinorSnapshot          Int @map("total_minor_snapshot")
+  currencySnapshot            Currency @default(EUR) @map("currency_snapshot")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  deviceModel DeviceModel  @relation(fields: [deviceModelId], references: [id], onDelete: Restrict)
+  deviceVariant DeviceVariant @relation(fields: [deviceVariantId], references: [id], onDelete: Restrict)
+  hardwareRevision HardwareRevision? @relation(fields: [hardwareRevisionId], references: [id], onDelete: SetNull)
+
+  serviceSnapshots OrderItemServiceSnapshot[]
+  optionSnapshots  OrderItemOptionSnapshot[]
+  repairCase       RepairCase?
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model OrderItemServiceSnapshot {
+  id String @db.Uuid @id @default(uuid())
+  orderItemId String @db.Uuid @map("order_item_id")
+  serviceId String? @db.Uuid @map("service_id")
+  nameSnapshot    String @map("name_snapshot")
+  priceMinorSnapshot Int @map("price_minor_snapshot")
+
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  service   Service?  @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@map("order_item_service_snapshots")
+}
+
+model OrderItemOptionSnapshot {
+  id String @db.Uuid @id @default(uuid())
+  orderItemId String @db.Uuid @map("order_item_id")
+  serviceOptionId String? @db.Uuid @map("service_option_id")
+  nameSnapshot       String @map("name_snapshot")
+  priceMinorSnapshot Int @map("price_minor_snapshot")
+
+  orderItem     OrderItem      @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  serviceOption ServiceOption? @relation(fields: [serviceOptionId], references: [id], onDelete: SetNull)
+
+  @@map("order_item_option_snapshots")
+}
+
+// -----------------------------------------------------------------------------
+// REPAIRS
+// -----------------------------------------------------------------------------
+
+// Definition des statuts, editable depuis l'administration (libelle, couleur,
+// ordre) mais dont les cles systeme (isSystem = true) sont protegees contre
+// la suppression et contre le renommage de la cle technique.
+model RepairStatusDefinition {
+  key          String  @id // cle technique stable, ex. "IN_REPAIR"
+  label        String
+  color        String  @default("#64748b")
+  displayOrder Int @default(0) @map("display_order")
+  isSystem     Boolean @default(false) @map("is_system")
+  isTerminal   Boolean @default(false) @map("is_terminal")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  transitionsFrom RepairStatusTransition[] @relation("TransitionFrom")
+  transitionsTo   RepairStatusTransition[] @relation("TransitionTo")
+  repairCases     RepairCase[]
+  history         RepairStatusHistory[]
+
+  @@map("repair_status_definitions")
+}
+
+// Matrice des transitions autorisees. Les transitions systeme critiques
+// (ex. vers CLOSED) sont protegees (isSystemProtected = true) et ne peuvent
+// pas etre supprimees depuis l'administration.
+model RepairStatusTransition {
+  id String @db.Uuid @id @default(uuid())
+  fromStatusKey      String @map("from_status_key")
+  toStatusKey        String @map("to_status_key")
+  isSystemProtected  Boolean @default(false) @map("is_system_protected")
+
+  fromStatus RepairStatusDefinition @relation("TransitionFrom", fields: [fromStatusKey], references: [key], onDelete: Cascade)
+  toStatus   RepairStatusDefinition @relation("TransitionTo", fields: [toStatusKey], references: [key], onDelete: Cascade)
+
+  @@unique([fromStatusKey, toStatusKey])
+  @@map("repair_status_transitions")
+}
+
+model RepairCase {
+  id String @db.Uuid @id @default(uuid())
+  reference              String         @unique // SMC-AAAA-NNNNNN
+  qrTokenHash            String @unique @map("qr_token_hash") // jeton opaque hache, voir ADR-009
+  qrTokenRevokedAt DateTime? @db.Timestamptz(3) @map("qr_token_revoked_at")
+  publicTrackingTokenHash     String? @unique @map("public_tracking_token_hash") // second jeton, distinct du QR atelier, pour un eventuel suivi public sans authentification (voir ADR-009)
+  publicTrackingTokenRevokedAt DateTime? @db.Timestamptz(3) @map("public_tracking_token_revoked_at")
+  clientId String? @db.Uuid @map("client_id")
+  companyId String? @db.Uuid @map("company_id")
+  orderId String @db.Uuid @map("order_id")
+  orderItemId String? @db.Uuid @unique @map("order_item_id")
+  deviceModelId String @db.Uuid @map("device_model_id")
+  deviceVariantId String @db.Uuid @map("device_variant_id")
+  hardwareRevisionId String? @db.Uuid @map("hardware_revision_id")
+  serialNumber           String? @map("serial_number")
+  reportedIssue          String? @map("reported_issue")
+  technicianDiagnosis    String? @map("technician_diagnosis")
+  assignedTechnicianId String? @db.Uuid @map("assigned_technician_id")
+  priority               RepairPriority @default(NORMAL)
+  statusKey              String @map("status_key")
+  estimatedReadyAt DateTime? @db.Timestamptz(3) @map("estimated_ready_at")
+  actualReadyAt DateTime? @db.Timestamptz(3) @map("actual_ready_at")
+  cancelReason           String? @map("cancel_reason")
+  unrepairableReason     String? @map("unrepairable_reason")
+  lockVersion            Int @default(0) @map("lock_version") // verrouillage optimiste
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+
+  client            User?                   @relation("RepairCaseClient", fields: [clientId], references: [id], onDelete: SetNull)
+  company           Company?                @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  order             Order                   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  orderItem         OrderItem?              @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+  deviceModel       DeviceModel             @relation(fields: [deviceModelId], references: [id], onDelete: Restrict)
+  deviceVariant     DeviceVariant           @relation(fields: [deviceVariantId], references: [id], onDelete: Restrict)
+  hardwareRevision  HardwareRevision?       @relation(fields: [hardwareRevisionId], references: [id], onDelete: SetNull)
+  assignedTechnician User?                  @relation("RepairCaseTechnician", fields: [assignedTechnicianId], references: [id], onDelete: SetNull)
+  status             RepairStatusDefinition @relation(fields: [statusKey], references: [key], onDelete: Restrict)
+
+  history        RepairStatusHistory[]
+  notes          RepairNote[]
+  files          RepairCaseFile[]
+  warrantyClaims WarrantyClaim[]
+
+  @@index([clientId])
+  @@index([companyId])
+  @@index([statusKey])
+  @@index([assignedTechnicianId])
+  @@map("repair_cases")
+}
+
+model RepairStatusHistory {
+  id String @db.Uuid @id @default(uuid())
+  repairCaseId String @db.Uuid @map("repair_case_id")
+  statusKey       String @map("status_key")
+  changedAt DateTime @db.Timestamptz(3) @default(now()) @map("changed_at")
+  changedByUserId String? @db.Uuid @map("changed_by_user_id")
+  comment         String?
+
+  repairCase RepairCase             @relation(fields: [repairCaseId], references: [id], onDelete: Cascade)
+  status     RepairStatusDefinition @relation(fields: [statusKey], references: [key], onDelete: Restrict)
+
+  @@index([repairCaseId])
+  @@map("repair_status_history")
+}
+
+// Une seule table pour les notes/messages, distinguee par `visibility` :
+// INTERNAL = jamais visible cote client, CLIENT = visible dans l'espace client.
+model RepairNote {
+  id String @db.Uuid @id @default(uuid())
+  repairCaseId String @db.Uuid @map("repair_case_id")
+  authorUserId String? @db.Uuid @map("author_user_id")
+  visibility   NoteVisibility
+  body         String
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  repairCase RepairCase @relation(fields: [repairCaseId], references: [id], onDelete: Cascade)
+  author     User?      @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([repairCaseId, visibility])
+  @@map("repair_notes")
+}
+
+model RepairCaseFile {
+  repairCaseId String @db.Uuid @map("repair_case_id")
+  fileId String @db.Uuid @map("file_id")
+
+  repairCase RepairCase @relation(fields: [repairCaseId], references: [id], onDelete: Cascade)
+  file       FileAsset  @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@id([repairCaseId, fileId])
+  @@map("repair_case_files")
+}
+
+model WarrantyClaim {
+  id String @db.Uuid @id @default(uuid())
+  originalRepairCaseId String @db.Uuid @map("original_repair_case_id")
+  warrantyPolicyId String? @db.Uuid @map("warranty_policy_id")
+  reason           String
+  accepted         Boolean?
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  decidedAt DateTime? @db.Timestamptz(3) @map("decided_at")
+
+  originalRepairCase RepairCase      @relation(fields: [originalRepairCaseId], references: [id], onDelete: Restrict)
+  warrantyPolicy      WarrantyPolicy? @relation(fields: [warrantyPolicyId], references: [id], onDelete: SetNull)
+
+  @@index([originalRepairCaseId])
+  @@map("warranty_claims")
+}
+
+// -----------------------------------------------------------------------------
+// OUTBOX (evenements metier transactionnels)
+// -----------------------------------------------------------------------------
+
+model OutboxEvent {
+  id String @db.Uuid @id @default(uuid())
+  eventType     String @map("event_type") // ex. "OrderCreated", "RepairStatusChanged"
+  aggregateType String @map("aggregate_type") // ex. "Order", "RepairCase"
+  aggregateId String @db.Uuid @map("aggregate_id")
+  payload       Json
+  payloadEncrypted Boolean @default(false) @map("payload_encrypted") // true si `payload` contient un champ `ciphertext` chiffre (voir ADR-016) plutot que des donnees en clair — utilise pour les evenements vehiculant un secret (ex. jeton de verification email)
+  occurredAt DateTime @db.Timestamptz(3) @default(now()) @map("occurred_at")
+  processedAt DateTime? @db.Timestamptz(3) @map("processed_at")
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  lastError     String? @map("last_error")
+  correlationId String @db.Uuid @map("correlation_id")
+  lockedAt      DateTime? @db.Timestamptz(3) @map("locked_at") // pose par un worker via FOR UPDATE SKIP LOCKED, voir ADR-017
+  lockedBy      String? @db.VarChar(100) @map("locked_by") // identifiant du processus worker ayant pris le verrou
+  nextAttemptAt DateTime @default(now()) @db.Timestamptz(3) @map("next_attempt_at") // backoff exponentiel : un evenement n'est repris qu'apres cette date
+
+  @@index([status, nextAttemptAt])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
+}
+
+// Compteur atomique par (perimetre, annee), utilise pour generer des
+// references commerciales lisibles sans collision (voir ADR-012 et
+// ReferenceGeneratorService). L'unicite est garantie par la contrainte
+// unique(scope, year) combinee a un INSERT ... ON CONFLICT DO UPDATE
+// atomique au niveau ligne PostgreSQL.
+model ReferenceCounter {
+  scope     String @db.VarChar(20)
+  year      Int
+  lastValue Int @default(0) @map("last_value")
+
+  @@id([scope, year])
+  @@map("reference_counters")
+}
+
+// -----------------------------------------------------------------------------
+// EXTENSIONS (preparation uniquement — voir ADR-010)
+// -----------------------------------------------------------------------------
+
+model ExtensionManifest {
+  id String @db.Uuid @id @default(uuid())
+  extensionKey       String @unique @map("extension_key")
+  name               String
+  version            String
+  author             String
+  description        String?
+  compatibilityRange String @map("compatibility_range")
+  permissions        Json // liste de cles de permission demandees, ex. ["shipping.write"]
+  status             ExtensionStatus @default(REGISTERED)
+  installedAt DateTime? @db.Timestamptz(3) @map("installed_at")
+  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+
+  eventLogs ExtensionEventLog[]
+
+  @@map("extension_manifests")
+}
+
+model ExtensionEventLog {
+  id String @db.Uuid @id @default(uuid())
+  extensionKey String @map("extension_key")
+  action       String // ex. "install", "activate", "rollback"
+  result       String // "success" | "failure"
+  message      String?
+  occurredAt DateTime @db.Timestamptz(3) @default(now()) @map("occurred_at")
+
+  extension ExtensionManifest @relation(fields: [extensionKey], references: [extensionKey], onDelete: Cascade)
+
+  @@index([extensionKey])
+  @@map("extension_event_logs")
+}

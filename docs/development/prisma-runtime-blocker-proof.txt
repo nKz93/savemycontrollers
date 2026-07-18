@@ -1,0 +1,4 @@
+MESSAGE EXACT: @prisma/client did not initialize yet. Please run "prisma generate" and try to import it again.
+STACK (2 premieres lignes):
+Error: @prisma/client did not initialize yet. Please run "prisma generate" and try to import it again.
+    at new PrismaClient (/home/claude/savemycontrollers/node_modules/.pnpm/@prisma+client@5.22.0_prisma@5.22.0/node_modules/.prisma/client/default.js:43:11)

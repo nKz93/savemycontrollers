@@ -1,0 +1,16 @@
+{
+  "common.currency.eur": "EUR",
+  "auth.register.success": "Votre compte a ete cree. Verifiez votre boite mail pour l'activer.",
+  "auth.login.invalid": "Identifiants invalides.",
+  "order.created": "Votre commande {reference} a ete creee.",
+  "repair.status.order_created": "Commande creee",
+  "repair.status.awaiting_shipment": "En attente d'envoi",
+  "repair.status.received": "Colis recu",
+  "repair.status.diagnosing": "Diagnostic en cours",
+  "repair.status.awaiting_client_validation": "En attente de votre validation",
+  "repair.status.in_repair": "Reparation en cours",
+  "repair.status.quality_check": "Controle qualite",
+  "repair.status.ready_to_ship": "Pret a expedier",
+  "repair.status.shipped": "Expedie",
+  "repair.status.closed": "Cloture"
+}

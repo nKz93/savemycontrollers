@@ -1,0 +1,10 @@
+{
+  "extends": "@smc/config-typescript/base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "outDir": "./dist",
+    "baseUrl": "./src"
+  },
+  "include": ["src/**/*.ts"]
+}

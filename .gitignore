@@ -1,0 +1,31 @@
+# Dependances
+node_modules/
+
+# Environnement — .env.example est le seul fichier d'environnement versionne
+.env
+.env.*
+!.env.example
+
+# Sorties de build (regenerees par la CI/le developpeur, jamais committees)
+dist/
+.next/
+.turbo/
+coverage/
+*.tsbuildinfo
+.prisma/
+
+# Logs
+*.log
+
+# Donnees d'infrastructure locale (Docker Compose volumes, si montes en bind local)
+postgres-data/
+redis-data/
+minio-data/
+
+# Divers
+.DS_Store
+/prisma/dev.db
+
+# Le schema Prisma, les migrations, prisma/seed, docs/api/openapi.json et
+# packages/api-client/src/generated NE SONT PAS ignores : ils sont
+# versionnes intentionnellement (voir docs/development/github-ci.md).

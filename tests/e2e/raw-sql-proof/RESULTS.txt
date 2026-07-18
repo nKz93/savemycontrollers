@@ -1,0 +1,33 @@
+
+=== Test 1 : generation concurrente de 30 references (compteur atomique) ===
+OK   - 30 appels concurrents produisent 30 valeurs strictement distinctes
+OK   - les valeurs forment bien la sequence 1..30 sans trou ni doublon
+
+=== Test 2 : prise atomique d'evenements Outbox par plusieurs workers concurrents ===
+OK   - aucun evenement n'est reclame par deux workers a la fois
+OK   - le nombre total d'evenements reclames ne depasse pas le nombre inseres (50)
+OK   - au moins un evenement a ete reclame
+  repartition des statuts apres reclamation : [ { status: 'PROCESSING', count: '50' } ]
+
+=== Test 3 : conversion panier -> commande, deux checkouts concurrents ===
+OK   - une seule des deux requetes concurrentes cree effectivement une commande
+OK   - une seule commande existe en base pour ce panier
+
+=== Test 4 : contraintes SQL CHECK (rejet des donnees invalides) ===
+OK   - montant negatif rejete (orders_min.subtotal_minor < 0)
+OK   - quantite nulle/negative rejetee (volume_discount_rules_min.min_quantity <= 0)
+OK   - taux de remise superieur a 100% rejete
+OK   - taux de remise a exactement 100% accepte (borne incluse)
+OK   - delai minimum superieur au maximum rejete
+OK   - adresse sans aucun proprietaire rejetee
+OK   - adresse avec DEUX proprietaires (user ET entreprise) rejetee
+OK   - adresse avec exactement un proprietaire (utilisateur) acceptee
+OK   - panier sans proprietaire ni jeton invite rejete
+OK   - panier invite (jeton seul, sans utilisateur ni entreprise) accepte
+OK   - panier utilisateur particulier (sans entreprise) accepte
+OK   - panier d'entreprise (utilisateur + entreprise, exception metier justifiee) accepte
+OK   - panier avec entreprise SEULE (sans utilisateur responsable) rejete
+OK   - panier utilisateur ET jeton invite simultanement rejete
+OK   - panier entreprise ET jeton invite simultanement rejete
+
+=== Resultat global : TOUS LES TESTS PASSENT ===
