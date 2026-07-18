@@ -112,6 +112,69 @@ export class CartService {
     return this.getCart(cartId, actor);
   }
 
+  /**
+   * Fusion securisee du panier invite lors de la connexion (voir section
+   * 3 du prompt). Contrat strict :
+   *  - `userId` provient EXCLUSIVEMENT du token JWT courant (jamais du
+   *    corps de la requete) — impose par la signature de cette methode ;
+   *  - `guestTokenRaw` est le jeton opaque brut lu depuis le cookie
+   *    HttpOnly ; aucun cartId n'est jamais accepte en entree ;
+   *  - idempotent : rejouer l'appel (jeton deja fusionne, ou absent) est
+   *    un no-op silencieux, jamais une erreur ;
+   *  - un panier deja converti en commande (`convertedAt` non nul) est
+   *    explicitement refuse ;
+   *  - si l'utilisateur possede deja un panier actif, les lignes du
+   *    panier invite y sont deplacees et le panier invite (vide) est
+   *    supprime plutot que laisse dans un etat ambigu.
+   */
+  async attachGuestCartToUser(userId: string, guestTokenRaw: string | undefined): Promise<{ cartId: string | null; merged: boolean }> {
+    if (!guestTokenRaw) {
+      return { cartId: null, merged: false };
+    }
+
+    const hash = this.tokens.hashOpaqueToken(guestTokenRaw);
+
+    return this.carts.runInTransaction(async (tx) => {
+      const guestCart = await tx.cart.findUnique({ where: { guestTokenHash: hash } });
+      if (!guestCart) {
+        // Jeton deja fusionne (rejeu) ou jamais valide : no-op idempotent,
+        // jamais une erreur — un rejeu ne doit pas bloquer la connexion.
+        return { cartId: null, merged: false };
+      }
+      if (guestCart.convertedAt) {
+        throw new ValidationDomainError("Ce panier a deja ete converti en commande, il ne peut pas etre fusionne.");
+      }
+      if (guestCart.userId && guestCart.userId !== userId) {
+        // Defense en profondeur : ne devrait jamais arriver puisque le
+        // jeton invite hache est mis a null des qu'un panier est attache
+        // a un utilisateur (voir plus bas).
+        throw new ForbiddenDomainError("Ce panier invite ne peut pas etre fusionne.");
+      }
+      if (guestCart.userId === userId) {
+        // Rejeu exact (meme utilisateur) : idempotent.
+        return { cartId: guestCart.id, merged: true };
+      }
+
+      const existingUserCart = await tx.cart.findFirst({ where: { userId, convertedAt: null } });
+
+      if (!existingUserCart) {
+        const updated = await tx.cart.update({
+          where: { id: guestCart.id },
+          data: { userId, guestTokenHash: null, expiresAt: null },
+        });
+        return { cartId: updated.id, merged: true };
+      }
+
+      // L'utilisateur a deja un panier actif : les lignes du panier
+      // invite y sont deplacees, puis le panier invite (desormais vide)
+      // est supprime — jamais laisse dans un etat qui violerait la
+      // contrainte d'appartenance exclusive (chk_carts_ownership).
+      await tx.cartItem.updateMany({ where: { cartId: guestCart.id }, data: { cartId: existingUserCart.id } });
+      await tx.cart.delete({ where: { id: guestCart.id } });
+      return { cartId: existingUserCart.id, merged: true };
+    });
+  }
+
   async getCart(cartId: string, actor: CartActor): Promise<CartDto> {
     const cart = await this.carts.findById(cartId);
     if (!cart) throw new NotFoundDomainError("Panier introuvable.");

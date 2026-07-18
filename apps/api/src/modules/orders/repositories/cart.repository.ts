@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { getPrismaClient } from "@smc/database";
+import { getPrismaClient, type Prisma } from "@smc/database";
 
 const GUEST_CART_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 jours
 
@@ -55,5 +55,9 @@ export class CartRepository {
       where: { id: cartId },
       data: { convertedToOrderId: orderId, convertedAt: new Date() },
     });
+  }
+
+  runInTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(fn);
   }
 }
