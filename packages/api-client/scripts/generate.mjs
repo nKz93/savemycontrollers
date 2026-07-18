@@ -20,7 +20,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "../../..");
 
 console.log("[1/2] Generation du contrat OpenAPI depuis l'API reelle...");
-execSync("pnpm --filter @smc/api exec jest --config jest.config.cjs --selectProjects unit --testPathPattern generate-openapi", {
+execSync("pnpm --filter @smc/api exec jest --config jest.config.cjs --selectProjects unit --testPathPattern generate-openapi --forceExit", {
   cwd: repoRoot,
   stdio: "inherit",
 });

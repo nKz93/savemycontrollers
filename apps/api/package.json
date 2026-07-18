@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:unit": "jest --config jest.config.cjs --selectProjects unit --forceExit",
     "test:integration": "jest --config jest.config.cjs --selectProjects integration --forceExit",
-    "openapi:generate": "node ./scripts/generate-openapi.mjs"
+    "openapi:generate": "jest --config jest.config.cjs --selectProjects unit --testPathPattern generate-openapi --forceExit"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.4",
