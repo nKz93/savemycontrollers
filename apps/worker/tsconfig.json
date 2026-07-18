@@ -4,7 +4,9 @@
     "module": "CommonJS",
     "moduleResolution": "Node",
     "outDir": "./dist",
-    "baseUrl": "./src"
+    "baseUrl": "./src",
+    "declaration": false,
+    "declarationMap": false
   },
   "include": ["src/**/*.ts"]
 }

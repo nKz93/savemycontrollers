@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { getPrismaClient, type Prisma } from "@smc/database";
+import { getPrismaClient, type Prisma, type AuditLog } from "@smc/database";
 
 @Injectable()
 export class AuditRepository {
@@ -17,7 +17,7 @@ export class AuditRepository {
     correlationId: string;
     beforeData?: Record<string, unknown>;
     afterData?: Record<string, unknown>;
-  }) {
+  }): Promise<AuditLog> {
     return this.prisma.auditLog.create({
       data: {
         ...entry,
@@ -32,7 +32,7 @@ export class AuditRepository {
     });
   }
 
-  listByResource(resourceType: string, resourceId: string) {
+  listByResource(resourceType: string, resourceId: string): Promise<AuditLog[]> {
     return this.prisma.auditLog.findMany({
       where: { resourceType, resourceId },
       orderBy: { occurredAt: "desc" },
