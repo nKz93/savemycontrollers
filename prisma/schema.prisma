@@ -151,18 +151,18 @@ enum ExtensionStatus {
 // -----------------------------------------------------------------------------
 
 model User {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   email              String      @unique @db.VarChar(255)
   passwordHash       String @map("password_hash")
-  firstName          String @db.VarChar(100) @map("first_name")
-  lastName           String @db.VarChar(100) @map("last_name")
+  firstName          String @map("first_name") @db.VarChar(100)
+  lastName           String @map("last_name") @db.VarChar(100)
   accountType        AccountType @default(INDIVIDUAL) @map("account_type")
-  emailVerifiedAt DateTime? @db.Timestamptz(3) @map("email_verified_at")
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
   isActive           Boolean @default(true) @map("is_active")
   failedLoginAttempts Int @default(0) @map("failed_login_attempts")
-  lockedUntil DateTime? @db.Timestamptz(3) @map("locked_until")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
-  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+  lockedUntil DateTime? @map("locked_until") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   sessions            Session[]
   emailVerifications  EmailVerificationToken[]
@@ -183,16 +183,16 @@ model User {
 }
 
 model Session {
-  id String @db.Uuid @id @default(uuid())
-  userId String @db.Uuid @map("user_id")
-  familyId String @db.Uuid @map("family_id") // regroupe toutes les rotations d'une meme connexion initiale ; permet de revoquer toute la famille en cas de reutilisation detectee (voir ADR-014)
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  familyId String @map("family_id") @db.Uuid // regroupe toutes les rotations d'une meme connexion initiale ; permet de revoquer toute la famille en cas de reutilisation detectee (voir ADR-014)
   refreshTokenHash String @unique @map("refresh_token_hash")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
-  lastUsedAt DateTime @db.Timestamptz(3) @default(now()) @map("last_used_at")
-  expiresAt DateTime @db.Timestamptz(3) @map("expires_at")
-  revokedAt DateTime? @db.Timestamptz(3) @map("revoked_at")
-  revokedReason        String? @db.VarChar(60) @map("revoked_reason") // ex. "ROTATED", "LOGOUT", "REUSE_DETECTED", "USER_REVOKED_ALL"
-  replacedBySessionId String? @db.Uuid @map("replaced_by_session_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastUsedAt DateTime @default(now()) @map("last_used_at") @db.Timestamptz(3)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokedReason        String? @map("revoked_reason") @db.VarChar(60) // ex. "ROTATED", "LOGOUT", "REUSE_DETECTED", "USER_REVOKED_ALL"
+  replacedBySessionId String? @map("replaced_by_session_id") @db.Uuid
   userAgent        String? @map("user_agent")
   ipAddress        String? @map("ip_address")
 
@@ -204,12 +204,12 @@ model Session {
 }
 
 model EmailVerificationToken {
-  id String @db.Uuid @id @default(uuid())
-  userId String @db.Uuid @map("user_id")
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
   tokenHash  String @unique @map("token_hash")
-  expiresAt DateTime @db.Timestamptz(3) @map("expires_at")
-  consumedAt DateTime? @db.Timestamptz(3) @map("consumed_at")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -218,12 +218,12 @@ model EmailVerificationToken {
 }
 
 model PasswordResetToken {
-  id String @db.Uuid @id @default(uuid())
-  userId String @db.Uuid @map("user_id")
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
   tokenHash  String @unique @map("token_hash")
-  expiresAt DateTime @db.Timestamptz(3) @map("expires_at")
-  consumedAt DateTime? @db.Timestamptz(3) @map("consumed_at")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -236,10 +236,10 @@ model PasswordResetToken {
 // -----------------------------------------------------------------------------
 
 model Permission {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   key         String   @unique // ex. "catalog.read" — cle stable, non renommable via l'admin
   description String
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   rolePermissions RolePermission[]
 
@@ -247,12 +247,12 @@ model Permission {
 }
 
 model Role {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   key       String   @unique // ex. "SUPER_ADMIN" — cle technique stable
   label     String // libelle modifiable depuis l'administration
   isSystem  Boolean @default(false) @map("is_system") // les roles systeme ne peuvent pas etre supprimes
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
-  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   rolePermissions RolePermission[]
   userRoles       UserRole[]
@@ -261,8 +261,8 @@ model Role {
 }
 
 model RolePermission {
-  roleId String @db.Uuid @map("role_id")
-  permissionId String @db.Uuid @map("permission_id")
+  roleId String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
 
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
@@ -272,8 +272,8 @@ model RolePermission {
 }
 
 model UserRole {
-  userId String @db.Uuid @map("user_id")
-  roleId String @db.Uuid @map("role_id")
+  userId String @map("user_id") @db.Uuid
+  roleId String @map("role_id") @db.Uuid
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
@@ -287,13 +287,13 @@ model UserRole {
 // -----------------------------------------------------------------------------
 
 model Company {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   name      String
   siret     String?
   vatNumber String? @map("vat_number")
   status    CompanyStatus @default(PENDING)
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
-  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   members            CompanyMember[]
   addresses          Address[]
@@ -307,11 +307,11 @@ model Company {
 }
 
 model CompanyMember {
-  id String @db.Uuid @id @default(uuid())
-  companyId String @db.Uuid @map("company_id")
-  userId String @db.Uuid @map("user_id")
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @map("company_id") @db.Uuid
+  userId String @map("user_id") @db.Uuid
   internalRole CompanyInternalRole @default(BUYER) @map("internal_role")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -321,9 +321,9 @@ model CompanyMember {
 }
 
 model Address {
-  id String @db.Uuid @id @default(uuid())
-  userId String? @db.Uuid @map("user_id")
-  companyId String? @db.Uuid @map("company_id")
+  id String @id @default(uuid()) @db.Uuid
+  userId String? @map("user_id") @db.Uuid
+  companyId String? @map("company_id") @db.Uuid
   label             String?
   recipientName     String @map("recipient_name")
   line1             String
@@ -334,7 +334,7 @@ model Address {
   phone             String?
   isDefaultBilling  Boolean @default(false) @map("is_default_billing")
   isDefaultShipping Boolean @default(false) @map("is_default_shipping")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -352,17 +352,17 @@ model Address {
 // -----------------------------------------------------------------------------
 
 model AuditLog {
-  id String @db.Uuid @id @default(uuid())
-  occurredAt DateTime @db.Timestamptz(3) @default(now()) @map("occurred_at")
-  actorUserId String? @db.Uuid @map("actor_user_id")
+  id String @id @default(uuid()) @db.Uuid
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz(3)
+  actorUserId String? @map("actor_user_id") @db.Uuid
   actorType     AuditActorType @map("actor_type")
   action        String // ex. "repair_case.status_changed"
   resourceType  String @map("resource_type")
-  resourceId String? @db.Uuid @map("resource_id")
+  resourceId String? @map("resource_id") @db.Uuid
   result        AuditResult
   ipAddress     String? @map("ip_address")
   userAgent     String? @map("user_agent")
-  correlationId String @db.Uuid @map("correlation_id")
+  correlationId String @map("correlation_id") @db.Uuid
   beforeData    Json? @map("before_data")
   afterData     Json? @map("after_data")
 
@@ -388,8 +388,8 @@ model Setting {
   isSecretRef     Boolean @default(false) @map("is_secret_ref") // true = la valeur reelle vit hors base (gestionnaire de secrets), ce champ ne stocke qu'une reference
   isPublic        Boolean @default(false) @map("is_public") // true = lisible par le frontend public sans authentification
   description     String?
-  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
-  updatedByUserId String? @db.Uuid @map("updated_by_user_id")
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedByUserId String? @map("updated_by_user_id") @db.Uuid
 
   history SettingHistory[]
 
@@ -397,12 +397,12 @@ model Setting {
 }
 
 model SettingHistory {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   settingKey      String @map("setting_key")
   oldValueJson    Json? @map("old_value_json")
   newValueJson    Json? @map("new_value_json")
-  changedAt DateTime @db.Timestamptz(3) @default(now()) @map("changed_at")
-  changedByUserId String? @db.Uuid @map("changed_by_user_id")
+  changedAt DateTime @default(now()) @map("changed_at") @db.Timestamptz(3)
+  changedByUserId String? @map("changed_by_user_id") @db.Uuid
 
   setting Setting @relation(fields: [settingKey], references: [key], onDelete: Cascade)
 
@@ -415,16 +415,16 @@ model SettingHistory {
 // -----------------------------------------------------------------------------
 
 model FileAsset {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   storageKey         String @unique @map("storage_key")
   originalFileName   String @map("original_file_name")
   mimeType           String @map("mime_type")
   sizeBytes          Int @map("size_bytes")
   visibility         FileVisibility
-  uploadedByUserId String? @db.Uuid @map("uploaded_by_user_id")
+  uploadedByUserId String? @map("uploaded_by_user_id") @db.Uuid
   relatedEntityType  FileRelatedEntityType? @map("related_entity_type")
-  relatedEntityId String? @db.Uuid @map("related_entity_id")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  relatedEntityId String? @map("related_entity_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   uploadedBy User? @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
 
@@ -441,18 +441,18 @@ model FileAsset {
 // -----------------------------------------------------------------------------
 
 model Brand {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   slug             String            @unique
   name             String
   status           PublishableStatus @default(DRAFT)
   displayOrder     Int @default(0) @map("display_order")
   shortDescription String? @map("short_description")
   longDescription  String? @map("long_description")
-  logoFileId String? @db.Uuid @map("logo_file_id")
+  logoFileId String? @map("logo_file_id") @db.Uuid
   seoTitle         String? @map("seo_title")
   seoDescription   String? @map("seo_description")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
-  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   logoFile FileAsset? @relation(fields: [logoFileId], references: [id], onDelete: SetNull)
   families ProductFamily[]
@@ -461,15 +461,15 @@ model Brand {
 }
 
 model ProductFamily {
-  id String @db.Uuid @id @default(uuid())
-  brandId String @db.Uuid @map("brand_id")
+  id String @id @default(uuid()) @db.Uuid
+  brandId String @map("brand_id") @db.Uuid
   slug             String
   name             String
   status           PublishableStatus @default(DRAFT)
   displayOrder     Int @default(0) @map("display_order")
   shortDescription String? @map("short_description")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
-  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   brand        Brand         @relation(fields: [brandId], references: [id], onDelete: Restrict)
   deviceModels DeviceModel[]
@@ -483,8 +483,8 @@ model ProductFamily {
 }
 
 model DeviceModel {
-  id String @db.Uuid @id @default(uuid())
-  familyId String @db.Uuid @map("family_id")
+  id String @id @default(uuid()) @db.Uuid
+  familyId String @map("family_id") @db.Uuid
   slug             String
   name             String
   status           PublishableStatus @default(DRAFT)
@@ -493,8 +493,8 @@ model DeviceModel {
   longDescription  String? @map("long_description")
   seoTitle         String? @map("seo_title")
   seoDescription   String? @map("seo_description")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
-  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   family   ProductFamily   @relation(fields: [familyId], references: [id], onDelete: Restrict)
   variants DeviceVariant[]
@@ -504,19 +504,20 @@ model DeviceModel {
   leadTimeRules      LeadTimeRule[]
   repairCases        RepairCase[]
   cartItems          CartItem[]
+  orderItems         OrderItem[]
 
   @@unique([familyId, slug])
   @@map("device_models")
 }
 
 model DeviceVariant {
-  id String @db.Uuid @id @default(uuid())
-  deviceModelId String @db.Uuid @map("device_model_id")
+  id String @id @default(uuid()) @db.Uuid
+  deviceModelId String @map("device_model_id") @db.Uuid
   name         String
   status       PublishableStatus @default(DRAFT)
   displayOrder Int @default(0) @map("display_order")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
-  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   deviceModel DeviceModel        @relation(fields: [deviceModelId], references: [id], onDelete: Restrict)
   revisions   HardwareRevision[]
@@ -525,36 +526,38 @@ model DeviceVariant {
   pricingRules       PricingRule[]
   repairCases        RepairCase[]
   cartItems          CartItem[]
+  orderItems         OrderItem[]
 
   @@map("device_variants")
 }
 
 model HardwareRevision {
-  id String @db.Uuid @id @default(uuid())
-  deviceVariantId String @db.Uuid @map("device_variant_id")
+  id String @id @default(uuid()) @db.Uuid
+  deviceVariantId String @map("device_variant_id") @db.Uuid
   code            String
   label           String
   notes           String?
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   deviceVariant DeviceVariant @relation(fields: [deviceVariantId], references: [id], onDelete: Restrict)
 
   compatibilityRules CompatibilityRule[]
   repairCases        RepairCase[]
   cartItems          CartItem[]
+  orderItems         OrderItem[]
 
   @@unique([deviceVariantId, code])
   @@map("hardware_revisions")
 }
 
 model ServiceCategory {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   slug         String              @unique
   name         String
   kind         ServiceCategoryKind
   displayOrder Int @default(0) @map("display_order")
   status       PublishableStatus   @default(DRAFT)
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   services Service[]
 
@@ -562,8 +565,8 @@ model ServiceCategory {
 }
 
 model Service {
-  id String @db.Uuid @id @default(uuid())
-  categoryId String @db.Uuid @map("category_id")
+  id String @id @default(uuid()) @db.Uuid
+  categoryId String @map("category_id") @db.Uuid
   slug                   String            @unique
   name                   String
   status                 PublishableStatus @default(DRAFT)
@@ -574,9 +577,9 @@ model Service {
   currency               Currency          @default(EUR)
   seoTitle               String? @map("seo_title")
   seoDescription         String? @map("seo_description")
-  defaultWarrantyPolicyId String? @db.Uuid @map("default_warranty_policy_id")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
-  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+  defaultWarrantyPolicyId String? @map("default_warranty_policy_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   category             ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   defaultWarrantyPolicy WarrantyPolicy? @relation(fields: [defaultWarrantyPolicyId], references: [id], onDelete: SetNull)
@@ -604,8 +607,8 @@ model Service {
 }
 
 model ServiceOption {
-  id String @db.Uuid @id @default(uuid())
-  serviceId String @db.Uuid @map("service_id")
+  id String @id @default(uuid()) @db.Uuid
+  serviceId String @map("service_id") @db.Uuid
   slug            String
   name            String
   status          PublishableStatus @default(DRAFT)
@@ -613,7 +616,7 @@ model ServiceOption {
   extraPriceMinor Int @default(0) @map("extra_price_minor")
   currency        Currency          @default(EUR)
   isRequired      Boolean @default(false) @map("is_required")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
@@ -625,7 +628,7 @@ model ServiceOption {
 }
 
 model ServicePack {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   slug         String            @unique
   name         String
   status       PublishableStatus @default(DRAFT)
@@ -633,7 +636,7 @@ model ServicePack {
   priceMinor   Int? @map("price_minor")
   currency     Currency          @default(EUR)
   isCumulativeWithDiscounts Boolean @default(false) @map("is_cumulative_with_discounts")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   items ServicePackItem[]
 
@@ -641,9 +644,9 @@ model ServicePack {
 }
 
 model ServicePackItem {
-  id String @db.Uuid @id @default(uuid())
-  servicePackId String @db.Uuid @map("service_pack_id")
-  serviceId String @db.Uuid @map("service_id")
+  id String @id @default(uuid()) @db.Uuid
+  servicePackId String @map("service_pack_id") @db.Uuid
+  serviceId String @map("service_id") @db.Uuid
 
   servicePack ServicePack @relation(fields: [servicePackId], references: [id], onDelete: Cascade)
   service     Service     @relation(fields: [serviceId], references: [id], onDelete: Restrict)
@@ -653,12 +656,12 @@ model ServicePackItem {
 }
 
 model Supplier {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   name      String
   email     String?
   phone     String?
   notes     String?
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   parts Part[]
 
@@ -666,15 +669,15 @@ model Supplier {
 }
 
 model Part {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   sku               String   @unique @db.VarChar(80)
   name              String
-  supplierId String? @db.Uuid @map("supplier_id")
+  supplierId String? @map("supplier_id") @db.Uuid
   purchaseCostMinor Int @map("purchase_cost_minor")
   currency          Currency @default(EUR)
   minStockThreshold Int @default(0) @map("min_stock_threshold")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
-  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   variants PartVariant[]
@@ -686,12 +689,12 @@ model Part {
 }
 
 model PartVariant {
-  id String @db.Uuid @id @default(uuid())
-  partId String @db.Uuid @map("part_id")
+  id String @id @default(uuid()) @db.Uuid
+  partId String @map("part_id") @db.Uuid
   name               String
   sku                String   @unique
   additionalCostMinor Int @default(0) @map("additional_cost_minor")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   part Part @relation(fields: [partId], references: [id], onDelete: Cascade)
 
@@ -699,13 +702,13 @@ model PartVariant {
 }
 
 model MediaAsset {
-  id String @db.Uuid @id @default(uuid())
-  fileId String @db.Uuid @map("file_id")
+  id String @id @default(uuid()) @db.Uuid
+  fileId String @map("file_id") @db.Uuid
   relatedEntityType MediaRelatedEntityType @map("related_entity_type")
-  relatedEntityId String @db.Uuid @map("related_entity_id")
+  relatedEntityId String @map("related_entity_id") @db.Uuid
   altText           String? @map("alt_text")
   displayOrder      Int @default(0) @map("display_order")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   file FileAsset @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
@@ -714,11 +717,11 @@ model MediaAsset {
 }
 
 model WarrantyPolicy {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   name         String
   durationDays Int @map("duration_days")
   exclusions   String?
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   servicesUsingAsDefault Service[]
   warrantyClaims         WarrantyClaim[]
@@ -735,15 +738,15 @@ model WarrantyPolicy {
 // service, il est considere compatible avec tout le catalogue (comportement
 // documente et testé).
 model CompatibilityRule {
-  id String @db.Uuid @id @default(uuid())
-  serviceId String @db.Uuid @map("service_id")
-  productFamilyId String? @db.Uuid @map("product_family_id")
-  deviceModelId String? @db.Uuid @map("device_model_id")
-  deviceVariantId String? @db.Uuid @map("device_variant_id")
-  hardwareRevisionId String? @db.Uuid @map("hardware_revision_id")
-  partId String? @db.Uuid @map("part_id")
+  id String @id @default(uuid()) @db.Uuid
+  serviceId String @map("service_id") @db.Uuid
+  productFamilyId String? @map("product_family_id") @db.Uuid
+  deviceModelId String? @map("device_model_id") @db.Uuid
+  deviceVariantId String? @map("device_variant_id") @db.Uuid
+  hardwareRevisionId String? @map("hardware_revision_id") @db.Uuid
+  partId String? @map("part_id") @db.Uuid
   note               String?
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   service          Service           @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   productFamily    ProductFamily?    @relation(fields: [productFamilyId], references: [id], onDelete: Cascade)
@@ -759,10 +762,10 @@ model CompatibilityRule {
 // serviceId ne peut etre selectionne que si requiredServiceId est deja
 // selectionne (dependance obligatoire).
 model RequirementRule {
-  id String @db.Uuid @id @default(uuid())
-  serviceId String @db.Uuid @map("service_id")
-  requiredServiceId String @db.Uuid @map("required_service_id")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  id String @id @default(uuid()) @db.Uuid
+  serviceId String @map("service_id") @db.Uuid
+  requiredServiceId String @map("required_service_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   service         Service @relation("RequirementSource", fields: [serviceId], references: [id], onDelete: Cascade)
   requiredService Service @relation("RequirementTarget", fields: [requiredServiceId], references: [id], onDelete: Cascade)
@@ -773,11 +776,11 @@ model RequirementRule {
 
 // serviceAId et serviceBId ne peuvent jamais etre selectionnes ensemble.
 model ExclusionRule {
-  id String @db.Uuid @id @default(uuid())
-  serviceAId String @db.Uuid @map("service_a_id")
-  serviceBId String @db.Uuid @map("service_b_id")
+  id String @id @default(uuid()) @db.Uuid
+  serviceAId String @map("service_a_id") @db.Uuid
+  serviceBId String @map("service_b_id") @db.Uuid
   reason      String?
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   serviceA Service @relation("ExclusionServiceA", fields: [serviceAId], references: [id], onDelete: Cascade)
   serviceB Service @relation("ExclusionServiceB", fields: [serviceBId], references: [id], onDelete: Cascade)
@@ -789,11 +792,11 @@ model ExclusionRule {
 // Suggestion non bloquante : si serviceId est selectionne, on recommande
 // recommendedServiceId.
 model RecommendationRule {
-  id String @db.Uuid @id @default(uuid())
-  serviceId String @db.Uuid @map("service_id")
-  recommendedServiceId String @db.Uuid @map("recommended_service_id")
+  id String @id @default(uuid()) @db.Uuid
+  serviceId String @map("service_id") @db.Uuid
+  recommendedServiceId String @map("recommended_service_id") @db.Uuid
   message               String
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   service            Service @relation("RecommendationSource", fields: [serviceId], references: [id], onDelete: Cascade)
   recommendedService Service @relation("RecommendationTarget", fields: [recommendedServiceId], references: [id], onDelete: Cascade)
@@ -806,17 +809,17 @@ model RecommendationRule {
 // et le type de client. Priorite de resolution : voir ADR/documentation
 // configurator (specifique > standard, entreprise > professionnel > public).
 model PricingRule {
-  id String @db.Uuid @id @default(uuid())
-  serviceId String @db.Uuid @map("service_id")
-  productFamilyId String? @db.Uuid @map("product_family_id")
-  deviceModelId String? @db.Uuid @map("device_model_id")
-  deviceVariantId String? @db.Uuid @map("device_variant_id")
+  id String @id @default(uuid()) @db.Uuid
+  serviceId String @map("service_id") @db.Uuid
+  productFamilyId String? @map("product_family_id") @db.Uuid
+  deviceModelId String? @map("device_model_id") @db.Uuid
+  deviceVariantId String? @map("device_variant_id") @db.Uuid
   clientType        ClientType @default(STANDARD) @map("client_type")
   amountMinor       Int @map("amount_minor")
   currency          Currency   @default(EUR)
-  validFrom DateTime? @db.Timestamptz(3) @map("valid_from")
-  validUntil DateTime? @db.Timestamptz(3) @map("valid_until")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  validFrom DateTime? @map("valid_from") @db.Timestamptz(3)
+  validUntil DateTime? @map("valid_until") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   service       Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   productFamily ProductFamily? @relation(fields: [productFamilyId], references: [id], onDelete: Cascade)
@@ -829,12 +832,12 @@ model PricingRule {
 
 // Remise par palier de quantite, globale ou restreinte a un service/entreprise.
 model VolumeDiscountRule {
-  id String @db.Uuid @id @default(uuid())
-  serviceId String? @db.Uuid @map("service_id")
-  companyId String? @db.Uuid @map("company_id")
+  id String @id @default(uuid()) @db.Uuid
+  serviceId String? @map("service_id") @db.Uuid
+  companyId String? @map("company_id") @db.Uuid
   minQuantity            Int @map("min_quantity")
   discountBasisPoints    Int @map("discount_basis_points") // ex. 1000 = 10,00 %
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   service Service? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -844,14 +847,14 @@ model VolumeDiscountRule {
 
 // Tarif negocie specifique a une entreprise, prioritaire sur PricingRule.
 model CompanyPricingOverride {
-  id String @db.Uuid @id @default(uuid())
-  companyId String @db.Uuid @map("company_id")
-  serviceId String @db.Uuid @map("service_id")
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @map("company_id") @db.Uuid
+  serviceId String @map("service_id") @db.Uuid
   amountMinor Int @map("amount_minor")
   currency    Currency @default(EUR)
-  validFrom DateTime? @db.Timestamptz(3) @map("valid_from")
-  validUntil DateTime? @db.Timestamptz(3) @map("valid_until")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  validFrom DateTime? @map("valid_from") @db.Timestamptz(3)
+  validUntil DateTime? @map("valid_until") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
@@ -861,13 +864,13 @@ model CompanyPricingOverride {
 }
 
 model LeadTimeRule {
-  id String @db.Uuid @id @default(uuid())
-  serviceId String @db.Uuid @map("service_id")
-  productFamilyId String? @db.Uuid @map("product_family_id")
-  deviceModelId String? @db.Uuid @map("device_model_id")
+  id String @id @default(uuid()) @db.Uuid
+  serviceId String @map("service_id") @db.Uuid
+  productFamilyId String? @map("product_family_id") @db.Uuid
+  deviceModelId String? @map("device_model_id") @db.Uuid
   minDays         Int @map("min_days")
   maxDays         Int @map("max_days")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   service       Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   productFamily ProductFamily? @relation(fields: [productFamilyId], references: [id], onDelete: Cascade)
@@ -878,9 +881,9 @@ model LeadTimeRule {
 
 // Une prestation consomme automatiquement une ou plusieurs pieces.
 model ServicePartRequirement {
-  id String @db.Uuid @id @default(uuid())
-  serviceId String @db.Uuid @map("service_id")
-  partId String @db.Uuid @map("part_id")
+  id String @id @default(uuid()) @db.Uuid
+  serviceId String @map("service_id") @db.Uuid
+  partId String @map("part_id") @db.Uuid
   quantity  Int     @default(1)
   optional  Boolean @default(false)
 
@@ -896,14 +899,14 @@ model ServicePartRequirement {
 // -----------------------------------------------------------------------------
 
 model Cart {
-  id String @db.Uuid @id @default(uuid())
-  userId String? @db.Uuid @map("user_id")
-  companyId String? @db.Uuid @map("company_id")
+  id String @id @default(uuid()) @db.Uuid
+  userId String? @map("user_id") @db.Uuid
+  companyId String? @map("company_id") @db.Uuid
   guestTokenHash   String? @unique @map("guest_token_hash") // panier invite : seul le hash du jeton opaque est stocke (voir ADR-015), jamais le jeton brut
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
-  expiresAt DateTime? @db.Timestamptz(3) @map("expires_at")
-  convertedAt DateTime? @db.Timestamptz(3) @map("converted_at")
-  convertedToOrderId String? @db.Uuid @unique @map("converted_to_order_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz(3)
+  convertedAt DateTime? @map("converted_at") @db.Timestamptz(3)
+  convertedToOrderId String? @unique @map("converted_to_order_id") @db.Uuid
 
   user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -914,13 +917,13 @@ model Cart {
 }
 
 model CartItem {
-  id String @db.Uuid @id @default(uuid())
-  cartId String @db.Uuid @map("cart_id")
-  deviceModelId String @db.Uuid @map("device_model_id")
-  deviceVariantId String @db.Uuid @map("device_variant_id")
-  hardwareRevisionId String? @db.Uuid @map("hardware_revision_id")
+  id String @id @default(uuid()) @db.Uuid
+  cartId String @map("cart_id") @db.Uuid
+  deviceModelId String @map("device_model_id") @db.Uuid
+  deviceVariantId String @map("device_variant_id") @db.Uuid
+  hardwareRevisionId String? @map("hardware_revision_id") @db.Uuid
   reportedIssue      String? @map("reported_issue")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   cart    Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
   deviceModel DeviceModel @relation(fields: [deviceModelId], references: [id], onDelete: Restrict)
@@ -935,8 +938,8 @@ model CartItem {
 }
 
 model CartItemService {
-  cartItemId String @db.Uuid @map("cart_item_id")
-  serviceId String @db.Uuid @map("service_id")
+  cartItemId String @map("cart_item_id") @db.Uuid
+  serviceId String @map("service_id") @db.Uuid
 
   cartItem CartItem @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
   service  Service  @relation(fields: [serviceId], references: [id], onDelete: Restrict)
@@ -946,8 +949,8 @@ model CartItemService {
 }
 
 model CartItemOption {
-  cartItemId String @db.Uuid @map("cart_item_id")
-  serviceOptionId String @db.Uuid @map("service_option_id")
+  cartItemId String @map("cart_item_id") @db.Uuid
+  serviceOptionId String @map("service_option_id") @db.Uuid
 
   cartItem CartItem @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
   serviceOption ServiceOption @relation(fields: [serviceOptionId], references: [id], onDelete: Restrict)
@@ -957,40 +960,40 @@ model CartItemOption {
 }
 
 model Order {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   reference        String               @unique @db.VarChar(30) // ex. SMC-2026-000123
-  userId String? @db.Uuid @map("user_id")
-  companyId String? @db.Uuid @map("company_id")
+  userId String? @map("user_id") @db.Uuid
+  companyId String? @map("company_id") @db.Uuid
   financialStatus  OrderFinancialStatus @default(AWAITING_PAYMENT) @map("financial_status")
   operationalStatus OrderOperationalStatus @default(CREATED) @map("operational_status") // distinct du statut financier : n'est jamais melange avec PAID/REFUNDED etc.
-  billingAddressId String? @db.Uuid @map("billing_address_id") // conserve uniquement pour tracabilite ; les documents utilisent l'instantane ci-dessous, jamais cette reference (l'adresse source peut etre modifiee ou supprimee ensuite)
-  shippingAddressId String? @db.Uuid @map("shipping_address_id")
-  billingRecipientName   String @db.VarChar(200) @map("billing_recipient_name")
-  billingCompanyName     String? @db.VarChar(200) @map("billing_company_name")
-  billingLine1           String @db.VarChar(255) @map("billing_line1")
-  billingLine2           String? @db.VarChar(255) @map("billing_line2")
-  billingPostalCode      String @db.VarChar(20) @map("billing_postal_code")
-  billingCity            String @db.VarChar(120) @map("billing_city")
-  billingCountry         String @db.VarChar(2) @map("billing_country")
-  billingPhone           String? @db.VarChar(30) @map("billing_phone")
-  shippingRecipientName  String @db.VarChar(200) @map("shipping_recipient_name")
-  shippingCompanyName    String? @db.VarChar(200) @map("shipping_company_name")
-  shippingLine1          String @db.VarChar(255) @map("shipping_line1")
-  shippingLine2          String? @db.VarChar(255) @map("shipping_line2")
-  shippingPostalCode     String @db.VarChar(20) @map("shipping_postal_code")
-  shippingCity           String @db.VarChar(120) @map("shipping_city")
-  shippingCountry        String @db.VarChar(2) @map("shipping_country")
-  shippingPhone          String? @db.VarChar(30) @map("shipping_phone")
+  billingAddressId String? @map("billing_address_id") @db.Uuid // conserve uniquement pour tracabilite ; les documents utilisent l'instantane ci-dessous, jamais cette reference (l'adresse source peut etre modifiee ou supprimee ensuite)
+  shippingAddressId String? @map("shipping_address_id") @db.Uuid
+  billingRecipientName   String @map("billing_recipient_name") @db.VarChar(200)
+  billingCompanyName     String? @map("billing_company_name") @db.VarChar(200)
+  billingLine1           String @map("billing_line1") @db.VarChar(255)
+  billingLine2           String? @map("billing_line2") @db.VarChar(255)
+  billingPostalCode      String @map("billing_postal_code") @db.VarChar(20)
+  billingCity            String @map("billing_city") @db.VarChar(120)
+  billingCountry         String @map("billing_country") @db.VarChar(2)
+  billingPhone           String? @map("billing_phone") @db.VarChar(30)
+  shippingRecipientName  String @map("shipping_recipient_name") @db.VarChar(200)
+  shippingCompanyName    String? @map("shipping_company_name") @db.VarChar(200)
+  shippingLine1          String @map("shipping_line1") @db.VarChar(255)
+  shippingLine2          String? @map("shipping_line2") @db.VarChar(255)
+  shippingPostalCode     String @map("shipping_postal_code") @db.VarChar(20)
+  shippingCity           String @map("shipping_city") @db.VarChar(120)
+  shippingCountry        String @map("shipping_country") @db.VarChar(2)
+  shippingPhone          String? @map("shipping_phone") @db.VarChar(30)
   subtotalMinor    Int @map("subtotal_minor")
   discountMinor    Int @default(0) @map("discount_minor")
   taxMinor         Int @map("tax_minor")
   shippingFeeMinor Int @default(0) @map("shipping_fee_minor")
   totalMinor       Int @map("total_minor")
   currency         Currency @default(EUR)
-  cancelledAt DateTime? @db.Timestamptz(3) @map("cancelled_at")
-  expiresAt DateTime? @db.Timestamptz(3) @map("expires_at")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
-  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+  cancelledAt DateTime? @map("cancelled_at") @db.Timestamptz(3)
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   company         Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1012,10 +1015,10 @@ model Order {
 // automatique) et un commentaire optionnel.
 model OrderStatusHistory {
   id              String   @id @default(uuid()) @db.Uuid
-  orderId         String @db.Uuid @map("order_id")
+  orderId         String @map("order_id") @db.Uuid
   status          OrderOperationalStatus
-  changedAt       DateTime @default(now()) @db.Timestamptz(3) @map("changed_at")
-  changedByUserId String? @db.Uuid @map("changed_by_user_id")
+  changedAt       DateTime @default(now()) @map("changed_at") @db.Timestamptz(3)
+  changedByUserId String? @map("changed_by_user_id") @db.Uuid
   changedBySystem Boolean @default(false) @map("changed_by_system")
   comment         String?
 
@@ -1028,11 +1031,11 @@ model OrderStatusHistory {
 // Instantane immuable au moment de la commande : une evolution ulterieure du
 // catalogue ou des prix ne doit jamais alterer une commande existante.
 model OrderItem {
-  id String @db.Uuid @id @default(uuid())
-  orderId String @db.Uuid @map("order_id")
-  deviceModelId String @db.Uuid @map("device_model_id")
-  deviceVariantId String @db.Uuid @map("device_variant_id")
-  hardwareRevisionId String? @db.Uuid @map("hardware_revision_id")
+  id String @id @default(uuid()) @db.Uuid
+  orderId String @map("order_id") @db.Uuid
+  deviceModelId String @map("device_model_id") @db.Uuid
+  deviceVariantId String @map("device_variant_id") @db.Uuid
+  hardwareRevisionId String? @map("hardware_revision_id") @db.Uuid
   deviceModelNameSnapshot     String @map("device_model_name_snapshot")
   deviceVariantNameSnapshot   String @map("device_variant_name_snapshot")
   hardwareRevisionLabelSnapshot String? @map("hardware_revision_label_snapshot")
@@ -1043,7 +1046,7 @@ model OrderItem {
   taxAmountMinorSnapshot      Int @map("tax_amount_minor_snapshot")
   totalMinorSnapshot          Int @map("total_minor_snapshot")
   currencySnapshot            Currency @default(EUR) @map("currency_snapshot")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
   deviceModel DeviceModel  @relation(fields: [deviceModelId], references: [id], onDelete: Restrict)
@@ -1059,9 +1062,9 @@ model OrderItem {
 }
 
 model OrderItemServiceSnapshot {
-  id String @db.Uuid @id @default(uuid())
-  orderItemId String @db.Uuid @map("order_item_id")
-  serviceId String? @db.Uuid @map("service_id")
+  id String @id @default(uuid()) @db.Uuid
+  orderItemId String @map("order_item_id") @db.Uuid
+  serviceId String? @map("service_id") @db.Uuid
   nameSnapshot    String @map("name_snapshot")
   priceMinorSnapshot Int @map("price_minor_snapshot")
 
@@ -1072,9 +1075,9 @@ model OrderItemServiceSnapshot {
 }
 
 model OrderItemOptionSnapshot {
-  id String @db.Uuid @id @default(uuid())
-  orderItemId String @db.Uuid @map("order_item_id")
-  serviceOptionId String? @db.Uuid @map("service_option_id")
+  id String @id @default(uuid()) @db.Uuid
+  orderItemId String @map("order_item_id") @db.Uuid
+  serviceOptionId String? @map("service_option_id") @db.Uuid
   nameSnapshot       String @map("name_snapshot")
   priceMinorSnapshot Int @map("price_minor_snapshot")
 
@@ -1098,7 +1101,7 @@ model RepairStatusDefinition {
   displayOrder Int @default(0) @map("display_order")
   isSystem     Boolean @default(false) @map("is_system")
   isTerminal   Boolean @default(false) @map("is_terminal")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   transitionsFrom RepairStatusTransition[] @relation("TransitionFrom")
   transitionsTo   RepairStatusTransition[] @relation("TransitionTo")
@@ -1112,7 +1115,7 @@ model RepairStatusDefinition {
 // (ex. vers CLOSED) sont protegees (isSystemProtected = true) et ne peuvent
 // pas etre supprimees depuis l'administration.
 model RepairStatusTransition {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   fromStatusKey      String @map("from_status_key")
   toStatusKey        String @map("to_status_key")
   isSystemProtected  Boolean @default(false) @map("is_system_protected")
@@ -1125,32 +1128,32 @@ model RepairStatusTransition {
 }
 
 model RepairCase {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   reference              String         @unique // SMC-AAAA-NNNNNN
   qrTokenHash            String @unique @map("qr_token_hash") // jeton opaque hache, voir ADR-009
-  qrTokenRevokedAt DateTime? @db.Timestamptz(3) @map("qr_token_revoked_at")
+  qrTokenRevokedAt DateTime? @map("qr_token_revoked_at") @db.Timestamptz(3)
   publicTrackingTokenHash     String? @unique @map("public_tracking_token_hash") // second jeton, distinct du QR atelier, pour un eventuel suivi public sans authentification (voir ADR-009)
-  publicTrackingTokenRevokedAt DateTime? @db.Timestamptz(3) @map("public_tracking_token_revoked_at")
-  clientId String? @db.Uuid @map("client_id")
-  companyId String? @db.Uuid @map("company_id")
-  orderId String @db.Uuid @map("order_id")
-  orderItemId String? @db.Uuid @unique @map("order_item_id")
-  deviceModelId String @db.Uuid @map("device_model_id")
-  deviceVariantId String @db.Uuid @map("device_variant_id")
-  hardwareRevisionId String? @db.Uuid @map("hardware_revision_id")
+  publicTrackingTokenRevokedAt DateTime? @map("public_tracking_token_revoked_at") @db.Timestamptz(3)
+  clientId String? @map("client_id") @db.Uuid
+  companyId String? @map("company_id") @db.Uuid
+  orderId String @map("order_id") @db.Uuid
+  orderItemId String? @unique @map("order_item_id") @db.Uuid
+  deviceModelId String @map("device_model_id") @db.Uuid
+  deviceVariantId String @map("device_variant_id") @db.Uuid
+  hardwareRevisionId String? @map("hardware_revision_id") @db.Uuid
   serialNumber           String? @map("serial_number")
   reportedIssue          String? @map("reported_issue")
   technicianDiagnosis    String? @map("technician_diagnosis")
-  assignedTechnicianId String? @db.Uuid @map("assigned_technician_id")
+  assignedTechnicianId String? @map("assigned_technician_id") @db.Uuid
   priority               RepairPriority @default(NORMAL)
   statusKey              String @map("status_key")
-  estimatedReadyAt DateTime? @db.Timestamptz(3) @map("estimated_ready_at")
-  actualReadyAt DateTime? @db.Timestamptz(3) @map("actual_ready_at")
+  estimatedReadyAt DateTime? @map("estimated_ready_at") @db.Timestamptz(3)
+  actualReadyAt DateTime? @map("actual_ready_at") @db.Timestamptz(3)
   cancelReason           String? @map("cancel_reason")
   unrepairableReason     String? @map("unrepairable_reason")
   lockVersion            Int @default(0) @map("lock_version") // verrouillage optimiste
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
-  updatedAt DateTime @db.Timestamptz(3) @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   client            User?                   @relation("RepairCaseClient", fields: [clientId], references: [id], onDelete: SetNull)
   company           Company?                @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1175,11 +1178,11 @@ model RepairCase {
 }
 
 model RepairStatusHistory {
-  id String @db.Uuid @id @default(uuid())
-  repairCaseId String @db.Uuid @map("repair_case_id")
+  id String @id @default(uuid()) @db.Uuid
+  repairCaseId String @map("repair_case_id") @db.Uuid
   statusKey       String @map("status_key")
-  changedAt DateTime @db.Timestamptz(3) @default(now()) @map("changed_at")
-  changedByUserId String? @db.Uuid @map("changed_by_user_id")
+  changedAt DateTime @default(now()) @map("changed_at") @db.Timestamptz(3)
+  changedByUserId String? @map("changed_by_user_id") @db.Uuid
   comment         String?
 
   repairCase RepairCase             @relation(fields: [repairCaseId], references: [id], onDelete: Cascade)
@@ -1192,12 +1195,12 @@ model RepairStatusHistory {
 // Une seule table pour les notes/messages, distinguee par `visibility` :
 // INTERNAL = jamais visible cote client, CLIENT = visible dans l'espace client.
 model RepairNote {
-  id String @db.Uuid @id @default(uuid())
-  repairCaseId String @db.Uuid @map("repair_case_id")
-  authorUserId String? @db.Uuid @map("author_user_id")
+  id String @id @default(uuid()) @db.Uuid
+  repairCaseId String @map("repair_case_id") @db.Uuid
+  authorUserId String? @map("author_user_id") @db.Uuid
   visibility   NoteVisibility
   body         String
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   repairCase RepairCase @relation(fields: [repairCaseId], references: [id], onDelete: Cascade)
   author     User?      @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
@@ -1207,8 +1210,8 @@ model RepairNote {
 }
 
 model RepairCaseFile {
-  repairCaseId String @db.Uuid @map("repair_case_id")
-  fileId String @db.Uuid @map("file_id")
+  repairCaseId String @map("repair_case_id") @db.Uuid
+  fileId String @map("file_id") @db.Uuid
 
   repairCase RepairCase @relation(fields: [repairCaseId], references: [id], onDelete: Cascade)
   file       FileAsset  @relation(fields: [fileId], references: [id], onDelete: Cascade)
@@ -1218,13 +1221,13 @@ model RepairCaseFile {
 }
 
 model WarrantyClaim {
-  id String @db.Uuid @id @default(uuid())
-  originalRepairCaseId String @db.Uuid @map("original_repair_case_id")
-  warrantyPolicyId String? @db.Uuid @map("warranty_policy_id")
+  id String @id @default(uuid()) @db.Uuid
+  originalRepairCaseId String @map("original_repair_case_id") @db.Uuid
+  warrantyPolicyId String? @map("warranty_policy_id") @db.Uuid
   reason           String
   accepted         Boolean?
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
-  decidedAt DateTime? @db.Timestamptz(3) @map("decided_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  decidedAt DateTime? @map("decided_at") @db.Timestamptz(3)
 
   originalRepairCase RepairCase      @relation(fields: [originalRepairCaseId], references: [id], onDelete: Restrict)
   warrantyPolicy      WarrantyPolicy? @relation(fields: [warrantyPolicyId], references: [id], onDelete: SetNull)
@@ -1238,21 +1241,21 @@ model WarrantyClaim {
 // -----------------------------------------------------------------------------
 
 model OutboxEvent {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   eventType     String @map("event_type") // ex. "OrderCreated", "RepairStatusChanged"
   aggregateType String @map("aggregate_type") // ex. "Order", "RepairCase"
-  aggregateId String @db.Uuid @map("aggregate_id")
+  aggregateId String @map("aggregate_id") @db.Uuid
   payload       Json
   payloadEncrypted Boolean @default(false) @map("payload_encrypted") // true si `payload` contient un champ `ciphertext` chiffre (voir ADR-016) plutot que des donnees en clair — utilise pour les evenements vehiculant un secret (ex. jeton de verification email)
-  occurredAt DateTime @db.Timestamptz(3) @default(now()) @map("occurred_at")
-  processedAt DateTime? @db.Timestamptz(3) @map("processed_at")
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz(3)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(3)
   status        OutboxStatus @default(PENDING)
   attempts      Int          @default(0)
   lastError     String? @map("last_error")
-  correlationId String @db.Uuid @map("correlation_id")
-  lockedAt      DateTime? @db.Timestamptz(3) @map("locked_at") // pose par un worker via FOR UPDATE SKIP LOCKED, voir ADR-017
-  lockedBy      String? @db.VarChar(100) @map("locked_by") // identifiant du processus worker ayant pris le verrou
-  nextAttemptAt DateTime @default(now()) @db.Timestamptz(3) @map("next_attempt_at") // backoff exponentiel : un evenement n'est repris qu'apres cette date
+  correlationId String @map("correlation_id") @db.Uuid
+  lockedAt      DateTime? @map("locked_at") @db.Timestamptz(3) // pose par un worker via FOR UPDATE SKIP LOCKED, voir ADR-017
+  lockedBy      String? @map("locked_by") @db.VarChar(100) // identifiant du processus worker ayant pris le verrou
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz(3) // backoff exponentiel : un evenement n'est repris qu'apres cette date
 
   @@index([status, nextAttemptAt])
   @@index([aggregateType, aggregateId])
@@ -1278,7 +1281,7 @@ model ReferenceCounter {
 // -----------------------------------------------------------------------------
 
 model ExtensionManifest {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   extensionKey       String @unique @map("extension_key")
   name               String
   version            String
@@ -1287,8 +1290,8 @@ model ExtensionManifest {
   compatibilityRange String @map("compatibility_range")
   permissions        Json // liste de cles de permission demandees, ex. ["shipping.write"]
   status             ExtensionStatus @default(REGISTERED)
-  installedAt DateTime? @db.Timestamptz(3) @map("installed_at")
-  createdAt DateTime @db.Timestamptz(3) @default(now()) @map("created_at")
+  installedAt DateTime? @map("installed_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   eventLogs ExtensionEventLog[]
 
@@ -1296,12 +1299,12 @@ model ExtensionManifest {
 }
 
 model ExtensionEventLog {
-  id String @db.Uuid @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   extensionKey String @map("extension_key")
   action       String // ex. "install", "activate", "rollback"
   result       String // "success" | "failure"
   message      String?
-  occurredAt DateTime @db.Timestamptz(3) @default(now()) @map("occurred_at")
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz(3)
 
   extension ExtensionManifest @relation(fields: [extensionKey], references: [extensionKey], onDelete: Cascade)
 
