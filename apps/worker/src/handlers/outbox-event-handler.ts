@@ -84,6 +84,6 @@ export async function handleOutboxEvent(event: OutboxEventLike, logger: AppLogge
 
 function redactEmail(email: string): string {
   const [local, domain] = email.split("@");
-  if (!domain) return "***";
+  if (!domain || !local) return "***";
   return `${local.slice(0, 2)}***@${domain}`;
 }
