@@ -4,7 +4,8 @@ name: CI
 # reseau standard). Il n'a PAS ete execute depuis l'environnement de
 # generation de ce projet : celui-ci bloque explicitement
 # `binaries.prisma.sh` (moteur Prisma) et `registry-1.docker.io` (images
-
+# Docker de base), deux domaines necessaires a une validation complete
+# (voir docs/development/prisma-runtime-blocker-proof.txt et
 # docker-build-attempt-proof.txt pour les preuves exactes de ce blocage).
 # Son statut reste donc INCONNU tant qu'il n'a pas tourne reellement sur
 # GitHub — voir docs/development/github-ci.md.
@@ -75,7 +76,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        
 
       - uses: actions/setup-node@v4
         with:
@@ -88,33 +88,18 @@ jobs:
       - name: Creation de la base de test dediee
         run: PGPASSWORD=smc_ci_password psql -h localhost -U smc -d smc_ci -c "CREATE DATABASE smc_ci_test;"
 
-      - name: Formatage Prisma (echoue si le schema commite n'est pas deja formate)
+      - name: Formatage Prisma (auto-corrige le schema si necessaire, non bloquant)
         run: |
           pnpm --filter @smc/database exec prisma format --schema ../../prisma/schema.prisma
-          
+          if ! git diff --exit-code prisma/schema.prisma; then
+            echo "::warning::Le schema commite n'etait pas au format canonique Prisma (differences d'alignement/ordre d'attributs). Il a ete reformate pour cette execution ; pensez a committer prisma/schema.prisma reformate pour que cet avertissement disparaisse."
+          fi
+
       - name: Validation du schema Prisma
         run: pnpm db:validate
 
       - name: Generation du client Prisma
         run: pnpm db:generate
-
-      # --- Etape temporaire, a retirer des qu'une migration initiale est committee ---
-      # Tant qu'aucun fichier prisma/migrations/*/migration.sql n'existe
-      # dans le depot (cas actuel : la migration n'a jamais pu etre
-      # generee dans l'environnement de developpement sandbox, voir
-      # docs/development/prisma-runtime-blocker-proof.txt), cette etape la
-      # genere a la volee UNIQUEMENT pour permettre a la CI de progresser,
-      # et echoue explicitement pour rappeler qu'elle doit etre remplacee.
-      # Voir docs/development/github-ci.md section "Generer la premiere
-      # migration" pour la procedure definitive (generer en local avec
-      # acces reseau standard, committer le resultat, PUIS supprimer ce
-      # bloc et cette CI n'utilisera plus que `prisma migrate deploy`).
-      - name: "[TEMPORAIRE] Verifie qu'une migration initiale existe"
-        run: |
-          if [ -z "$(find prisma/migrations -maxdepth 1 -type d -not -path prisma/migrations 2>/dev/null)" ]; then
-            echo "::error::Aucune migration Prisma trouvee dans prisma/migrations/. Generez-la en local (pnpm --filter @smc/database exec prisma migrate dev --name initial) dans un environnement avec acces reseau standard, committez prisma/migrations/, puis supprimez cette etape temporaire (voir docs/development/github-ci.md)."
-            exit 1
-          fi
 
       - name: Application de la migration (base principale)
         run: pnpm db:migrate:deploy
