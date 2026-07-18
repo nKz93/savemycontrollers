@@ -65,7 +65,12 @@ export class OrderService {
 
     // Revalidation complete de chaque ligne au moment de la commande
     // (le panier a pu vieillir : stock, prix, compatibilite).
-    const pricedItems = [];
+    const pricedItems: Array<{
+      item: (typeof cart.items)[number];
+      validation: Awaited<ReturnType<ConfiguratorPublicApi["validate"]>>;
+      deviceModelName: string;
+      deviceVariantName: string;
+    }> = [];
     for (const item of cart.items) {
       const serviceIds = item.services.map((s) => s.serviceId);
       const optionIds = item.options.map((o) => o.serviceOptionId);
