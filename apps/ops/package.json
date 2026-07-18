@@ -6,7 +6,7 @@
     "build": "next build",
     "dev": "next dev -p 3002",
     "start": "next start -p 3002",
-    "lint": "next lint",
+    "lint": "eslint app --ext .ts,.tsx",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
@@ -22,6 +22,7 @@
     "@types/react-dom": "^18.3.0",
     "typescript": "^5.6.3",
     "@smc/config-typescript": "workspace:*",
-    "@smc/eslint-config": "workspace:*"
+    "@smc/eslint-config": "workspace:*",
+    "eslint": "^9.13.0"
   }
 }
