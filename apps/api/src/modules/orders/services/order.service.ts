@@ -172,16 +172,24 @@ export class OrderService {
         correlationId,
       });
 
-      const repairCaseInputs = createdOrder.items.map((orderItem, index) => ({
-        orderId: createdOrder.id,
-        orderItemId: orderItem.id,
-        clientId: userId,
-        companyId,
-        deviceModelId: pricedItems[index].item.deviceModelId,
-        deviceVariantId: pricedItems[index].item.deviceVariantId,
-        hardwareRevisionId: pricedItems[index].item.hardwareRevisionId ?? undefined,
-        reportedIssue: pricedItems[index].item.reportedIssue ?? undefined,
-      }));
+      const repairCaseInputs = createdOrder.items.map((orderItem, index) => {
+        const priced = pricedItems[index];
+        if (!priced) {
+          // Ne devrait jamais arriver : les deux tableaux sont construits
+          // dans le meme ordre a partir de la meme source (cart.items).
+          throw new Error(`Incoherence interne : aucune ligne de prix pour l'index ${index}.`);
+        }
+        return {
+          orderId: createdOrder.id,
+          orderItemId: orderItem.id,
+          clientId: userId,
+          companyId,
+          deviceModelId: priced.item.deviceModelId,
+          deviceVariantId: priced.item.deviceVariantId,
+          hardwareRevisionId: priced.item.hardwareRevisionId ?? undefined,
+          reportedIssue: priced.item.reportedIssue ?? undefined,
+        };
+      });
       await this.repairs.createCasesForOrderInTransaction(tx, repairCaseInputs, correlationId);
 
       await tx.cart.update({ where: { id: cart.id }, data: { convertedToOrderId: createdOrder.id, convertedAt: new Date() } });
