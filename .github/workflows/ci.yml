@@ -163,9 +163,13 @@ jobs:
             if curl -sf http://localhost:3001/health > /tmp/health.json; then break; fi
             sleep 1
           done
-          cat /tmp/health.json
+          echo "--- Log complet de demarrage de l'API (api-startup.log) ---"
+          cat api-startup.log
+          echo "--- Fin du log ---"
+          echo "--- Reponse /health (peut etre vide si l'API n'a jamais repondu) ---"
+          cat /tmp/health.json 2>/dev/null || echo "(aucune reponse recue)"
+          kill "$(cat api.pid)" 2>/dev/null || true
           grep -q '"status":"ok"' /tmp/health.json
-          kill "$(cat api.pid)"
 
       - name: Demarrage controle du worker compile (verifie l'absence d'erreur de bootstrap)
         run: |
