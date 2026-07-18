@@ -197,7 +197,10 @@ jobs:
 
       - name: Recherche de secrets dans le depot
         run: |
-          ! grep -rniE "(AKIA[0-9A-Z]{16}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----|sk_live_|pk_live_)" --include="*.ts" --include="*.json" . || (echo "::error::Secret potentiel detecte" && exit 1)
+          ! grep -rniE "(AKIA[0-9A-Z]{16}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----|sk_live_|pk_live_)" \
+            --include="*.ts" --include="*.json" \
+            --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=.next --exclude-dir=.turbo \
+            . || (echo "::error::Secret potentiel detecte" && exit 1)
 
       - name: Audit des dependances de production
         if: always()
