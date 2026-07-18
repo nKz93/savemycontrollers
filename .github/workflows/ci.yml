@@ -180,8 +180,10 @@ jobs:
 
       - name: Demarrage controle du worker compile (verifie l'absence d'erreur de bootstrap)
         run: |
+          set +e
           timeout 10s node apps/worker/dist/main.js > worker-startup.log 2>&1
           status=$?
+          set -e
           cat worker-startup.log
           # 124 = timeout normal (le worker tourne en boucle, arret volontaire) ;
           # tout autre code de sortie non nul indique une erreur de demarrage.
