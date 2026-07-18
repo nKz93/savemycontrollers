@@ -2,6 +2,7 @@
   "extends": "@smc/config-typescript/nestjs.json",
   "compilerOptions": {
     "baseUrl": "./src",
+    "rootDir": "./src",
     "declaration": false,
     "declarationMap": false
   },

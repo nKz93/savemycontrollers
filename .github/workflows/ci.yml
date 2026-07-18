@@ -137,6 +137,13 @@ jobs:
       - name: Build de tous les packages et applications
         run: pnpm build
 
+      - name: "[DIAGNOSTIC] Contenu de apps/api/dist et apps/worker/dist"
+        run: |
+          echo "--- apps/api/dist ---"
+          find apps/api/dist -maxdepth 2 || echo "apps/api/dist introuvable"
+          echo "--- apps/worker/dist ---"
+          find apps/worker/dist -maxdepth 2 || echo "apps/worker/dist introuvable"
+
       - name: Verifie que @smc/database expose bien ses declarations de types
         run: test -f packages/database/dist/index.d.ts
 
