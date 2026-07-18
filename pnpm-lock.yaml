@@ -17,6 +17,9 @@ importers:
       prettier:
         specifier: ^3.3.3
         version: 3.9.5
+      prisma:
+        specifier: 5.22.0
+        version: 5.22.0
       rimraf:
         specifier: ^6.0.1
         version: 6.1.3
