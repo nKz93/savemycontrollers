@@ -308,6 +308,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cart/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CartController_mergeGuestCart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/cart/{cartId}": {
         parameters: {
             query?: never;
@@ -370,6 +386,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/addresses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AddressController_list"];
+        put?: never;
+        post: operations["AddressController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/addresses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AddressController_get"];
+        put?: never;
+        post?: never;
+        delete: operations["AddressController_remove"];
+        options?: never;
+        head?: never;
+        patch: operations["AddressController_update"];
         trace?: never;
     };
     "/client/repair-cases": {
@@ -583,7 +631,118 @@ export interface paths {
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: never;
+    schemas: {
+        MergeCartResponseDto: {
+            merged: boolean;
+            cartId?: Record<string, never> | null;
+        };
+        CreateOrderBodyDto: {
+            cartId: string;
+            billingAddressId: string;
+            shippingAddressId: string;
+        };
+        OrderAddressSnapshotResponseDto: {
+            recipientName: string;
+            companyName?: Record<string, never> | null;
+            line1: string;
+            line2?: Record<string, never> | null;
+            postalCode: string;
+            city: string;
+            country: string;
+            phone?: Record<string, never> | null;
+        };
+        OrderLineComponentResponseDto: {
+            name: string;
+            priceMinor: number;
+        };
+        OrderItemDetailResponseDto: {
+            id: string;
+            deviceModelName: string;
+            deviceVariantName: string;
+            hardwareRevisionLabel?: Record<string, never> | null;
+            reportedIssue?: Record<string, never> | null;
+            unitPriceMinor: number;
+            discountMinor: number;
+            taxAmountMinor: number;
+            totalMinor: number;
+            services: components["schemas"]["OrderLineComponentResponseDto"][];
+            options: components["schemas"]["OrderLineComponentResponseDto"][];
+            repairCaseId?: Record<string, never> | null;
+        };
+        OrderDetailResponseDto: {
+            id: string;
+            reference: string;
+            financialStatus: Record<string, never>;
+            operationalStatus: Record<string, never>;
+            billingAddress: components["schemas"]["OrderAddressSnapshotResponseDto"];
+            shippingAddress: components["schemas"]["OrderAddressSnapshotResponseDto"];
+            subtotalMinor: number;
+            discountMinor: number;
+            taxMinor: number;
+            shippingFeeMinor: number;
+            totalMinor: number;
+            /** @example EUR */
+            currency: string;
+            items: components["schemas"]["OrderItemDetailResponseDto"][];
+            createdAt: string;
+        };
+        OrderSummaryResponseDto: {
+            id: string;
+            reference: string;
+            /** @enum {string} */
+            financialStatus: "AWAITING_PAYMENT" | "PAID" | "PARTIALLY_REFUNDED" | "REFUNDED" | "CANCELLED";
+            /** @enum {string} */
+            operationalStatus: "CREATED" | "AWAITING_SHIPMENT_FROM_CLIENT" | "IN_PROGRESS" | "PARTIALLY_SHIPPED" | "SHIPPED" | "DELIVERED" | "CLOSED" | "CANCELLED";
+            /** @description Montant total en centimes (unite mineure). */
+            totalMinor: number;
+            /** @example EUR */
+            currency: string;
+            itemCount: number;
+            createdAt: string;
+        };
+        AddressResponseDto: {
+            id: string;
+            label?: Record<string, never> | null;
+            recipientName: string;
+            line1: string;
+            line2?: Record<string, never> | null;
+            postalCode: string;
+            city: string;
+            /** @example FR */
+            country: string;
+            phone?: Record<string, never> | null;
+            isDefaultBilling: boolean;
+            isDefaultShipping: boolean;
+        };
+        CreateAddressBodyDto: {
+            label?: string;
+            recipientName: string;
+            line1: string;
+            line2?: string;
+            postalCode: string;
+            city: string;
+            /** @example FR */
+            country: string;
+            phone?: string;
+            /** @default false */
+            isDefaultBilling: boolean;
+            /** @default false */
+            isDefaultShipping: boolean;
+        };
+        UpdateAddressBodyDto: {
+            label?: string;
+            recipientName?: string;
+            line1?: string;
+            line2?: string;
+            postalCode?: string;
+            city?: string;
+            /** @example FR */
+            country?: string;
+            phone?: string;
+            isDefaultBilling?: boolean;
+            isDefaultShipping?: boolean;
+        };
+    };
     responses: never;
     parameters: never;
     requestBodies: never;
@@ -960,6 +1119,25 @@ export interface operations {
             };
         };
     };
+    CartController_mergeGuestCart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergeCartResponseDto"];
+                };
+            };
+        };
+    };
     CartController_getCartGuest: {
         parameters: {
             query?: never;
@@ -1011,7 +1189,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OrderSummaryResponseDto"][];
+                };
             };
         };
     };
@@ -1022,9 +1202,29 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrderBodyDto"];
+            };
+        };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetailResponseDto"];
+                };
+            };
+            /** @description Panier vide, deja converti, expire, ou ligne invalide. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Panier ou adresse n'appartenant pas a l'utilisateur courant. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1044,6 +1244,144 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetailResponseDto"];
+                };
+            };
+            /** @description Commande introuvable ou n'appartenant pas a l'utilisateur courant. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AddressController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddressResponseDto"][];
+                };
+            };
+        };
+    };
+    AddressController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAddressBodyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddressResponseDto"];
+                };
+            };
+        };
+    };
+    AddressController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddressResponseDto"];
+                };
+            };
+            /** @description Adresse introuvable ou n'appartenant pas a l'utilisateur courant. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AddressController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Adresse supprimee. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Adresse introuvable ou n'appartenant pas a l'utilisateur courant. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AddressController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAddressBodyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddressResponseDto"];
+                };
+            };
+            /** @description Adresse introuvable ou n'appartenant pas a l'utilisateur courant. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
