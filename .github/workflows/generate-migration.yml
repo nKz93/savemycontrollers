@@ -1,41 +1,59 @@
 name: Generate initial Prisma migration
 
+# Workflow a usage unique : genere la premiere migration Prisma dans un
+# environnement CI ayant un acces reseau standard (contrairement au
+# sandbox de developpement initial de ce projet), puis la commite
+# directement dans le depot. A executer manuellement une seule fois
+# (bouton "Run workflow"), voir docs/development/github-ci.md.
+
 on:
   workflow_dispatch: {}
 
-  permissions:
-    contents: write
+permissions:
+  contents: write
 
-    jobs:
-      generate-migration:
-          runs-on: ubuntu-latest
-              services:
-                    postgres:
-                            image: postgres:16-alpine
-                                    env:
-                                              POSTGRES_USER: smc
-                                                        POSTGRES_PASSWORD: smc_migration_password
-                                                                  POSTGRES_DB: smc_migration
-                                                                          ports: ["5432:5432"]
-                                                                                  options: >-
-                                                                                            --health-cmd "pg_isready -U smc -d smc_migration"
-                                                                                                      --health-interval 5s --health-timeout 5s --health-retries 10
-                                                                                                          env:
-                                                                                                                DATABASE_URL: postgresql://smc:smc_migration_password@localhost:5432/smc_migration?schema=public
-                                                                                                                    steps:
-                                                                                                                          - uses: actions/checkout@v4
-                                                                                                                                - uses: pnpm/action-setup@v4
-                                                                                                                                      - uses: actions/setup-node@v4
-                                                                                                                                              with:
-                                                                                                                                                        node-version: 20
-                                                                                                                                                                  cache: pnpm
-                                                                                                                                                                        - run: pnpm install --frozen-lockfile
-                                                                                                                                                                              - name: Genere la migration initiale
-                                                                                                                                                                                      run: pnpm --filter @smc/database exec prisma migrate dev --schema ../../prisma/schema.prisma --name initial --skip-seed
-                                                                                                                                                                                            - name: Commit et push la migration
-                                                                                                                                                                                                    run: |
-                                                                                                                                                                                                              git config user.name "github-actions[bot]"
-                                                                                                                                                                                                                        git config user.email "github-actions[bot]@users.noreply.github.com"
-                                                                                                                                                                                                                                  git add prisma/migrations
-                                                                                                                                                                                                                                            if git diff --staged --quiet; then echo "Rien a committer"; else git commit -m "Ajoute la migration Prisma initiale (generee automatiquement)"; git push; fi
-                                                                                                                                                                                                                                            
+jobs:
+  generate-migration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: smc
+          POSTGRES_PASSWORD: smc_migration_password
+          POSTGRES_DB: smc_migration
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U smc -d smc_migration"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://smc:smc_migration_password@localhost:5432/smc_migration?schema=public
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Installation
+        run: pnpm install --frozen-lockfile
+
+      - name: Genere la migration initiale
+        run: pnpm --filter @smc/database exec prisma migrate dev --schema ../../prisma/schema.prisma --name initial --skip-seed
+
+      - name: Commit et push la migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add prisma/migrations
+          if git diff --staged --quiet; then
+            echo "Rien a committer"
+          else
+            git commit -m "Ajoute la migration Prisma initiale (generee automatiquement)"
+            git push
+          fi
