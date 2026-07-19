@@ -1,7 +1,13 @@
 import { Controller, Get, Param } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CatalogService } from "../services/catalog.service.js";
 import type { BrandDto, DeviceModelDto, ServiceDto } from "@smc/contracts";
+import {
+  BrandResponseDto,
+  DeviceModelResponseDto,
+  DeviceModelDetailResponseDto,
+  ServiceResponseDto,
+} from "../swagger/catalog.swagger-dto.js";
 
 /**
  * Endpoints publics en lecture seule, consommes par le site vitrine et le
@@ -14,6 +20,7 @@ export class CatalogPublicController {
   constructor(private readonly catalog: CatalogService) {}
 
   @Get("brands")
+  @ApiResponse({ status: 200, type: [BrandResponseDto] })
   async listBrands(): Promise<BrandDto[]> {
     const brands = await this.catalog.listActiveBrands();
     return brands.map((b) => ({
@@ -28,6 +35,7 @@ export class CatalogPublicController {
   }
 
   @Get("device-models")
+  @ApiResponse({ status: 200, type: [DeviceModelResponseDto] })
   async listDeviceModels(): Promise<DeviceModelDto[]> {
     const models = await this.catalog.listActiveDeviceModels();
     return models.map((m) => ({
@@ -49,11 +57,14 @@ export class CatalogPublicController {
   }
 
   @Get("device-models/:familySlug/:modelSlug")
+  @ApiResponse({ status: 200, type: DeviceModelDetailResponseDto })
+  @ApiResponse({ status: 404, description: "Modele introuvable." })
   async getDeviceModel(@Param("familySlug") familySlug: string, @Param("modelSlug") modelSlug: string) {
     return this.catalog.getDeviceModelDetail(familySlug, modelSlug);
   }
 
   @Get("services")
+  @ApiResponse({ status: 200, type: [ServiceResponseDto] })
   async listServices(): Promise<ServiceDto[]> {
     const services = await this.catalog.listActiveServices();
     return services.map((s) => ({

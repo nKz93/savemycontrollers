@@ -3,7 +3,7 @@ import { Throttle } from "@nestjs/throttler";
 import { RedisRateLimitGuard, RedisRateLimit } from "../../core/security/redis-rate-limit.guard.js";
 import type { Request, Response } from "express";
 import { randomUUID } from "node:crypto";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
 import {
   loginRequestSchema,
   registerRequestSchema,
@@ -11,12 +11,21 @@ import {
   type LoginRequest,
   type RegisterRequest,
   type ResetPasswordRequest,
+  type AuthenticatedUserDto,
 } from "@smc/contracts";
 import { ZodValidationPipe } from "../../core/http/zod-validation.pipe.js";
 import { AuthService } from "../services/auth.service.js";
 import { JwtAuthGuard, type RequestWithUser } from "../guards/jwt-auth.guard.js";
 import { CurrentUser } from "../decorators/current-user.decorator.js";
 import { TokenService } from "../services/token.service.js";
+import {
+  RegisterBodyDto,
+  LoginBodyDto,
+  ResetPasswordBodyDto,
+  AuthenticatedUserResponseDto,
+  SessionResponseDto,
+  MessageResponseDto,
+} from "../swagger/auth.swagger-dto.js";
 
 const REFRESH_COOKIE = "smc_refresh_token";
 const ACCESS_COOKIE = "smc_access_token";
@@ -62,6 +71,8 @@ export class AuthController {
   @Post("register")
   @UseGuards(RedisRateLimitGuard)
   @RedisRateLimit({ limit: 5, windowSeconds: 3600, byEmail: true })
+  @ApiBody({ type: RegisterBodyDto })
+  @ApiResponse({ status: 201, type: MessageResponseDto })
   @UsePipes(new ZodValidationPipe(registerRequestSchema))
   async register(@Body() body: RegisterRequest, @Req() req: Request) {
     const correlationId = (req.headers["x-correlation-id"] as string) ?? randomUUID();
@@ -75,6 +86,7 @@ export class AuthController {
 
   @Post("verify-email")
   @Throttle({ default: { limit: 10, ttl: 3_600_000 } })
+  @ApiResponse({ status: 200, type: MessageResponseDto })
   @HttpCode(200)
   async verifyEmail(@Body("token") token: string) {
     await this.auth.verifyEmail(token);
@@ -88,9 +100,12 @@ export class AuthController {
   // pas duplique ici pour eviter toute interference entre les deux couches.
   @UseGuards(RedisRateLimitGuard)
   @RedisRateLimit({ limit: 10, windowSeconds: 60, byEmail: true })
+  @ApiBody({ type: LoginBodyDto })
+  @ApiResponse({ status: 200, type: AuthenticatedUserResponseDto })
+  @ApiResponse({ status: 401, description: "Identifiants invalides." })
   @HttpCode(200)
   @UsePipes(new ZodValidationPipe(loginRequestSchema))
-  async login(@Body() body: LoginRequest, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async login(@Body() body: LoginRequest, @Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<AuthenticatedUserDto> {
     const correlationId = (req.headers["x-correlation-id"] as string) ?? randomUUID();
     const { user, accessToken, rawRefreshToken } = await this.auth.login(body, {
       ipAddress: req.ip,
@@ -111,6 +126,7 @@ export class AuthController {
 
   @Post("refresh")
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiResponse({ status: 200, type: MessageResponseDto })
   @HttpCode(200)
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const rawRefreshToken = req.cookies?.[REFRESH_COOKIE] as string | undefined;
@@ -127,6 +143,7 @@ export class AuthController {
   }
 
   @Post("logout")
+  @ApiResponse({ status: 200, type: MessageResponseDto })
   @HttpCode(200)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const rawRefreshToken = req.cookies?.[REFRESH_COOKIE] as string | undefined;
@@ -139,6 +156,7 @@ export class AuthController {
   @Post("forgot-password")
   @UseGuards(RedisRateLimitGuard)
   @RedisRateLimit({ limit: 5, windowSeconds: 3600, byEmail: true })
+  @ApiResponse({ status: 200, type: MessageResponseDto })
   @HttpCode(200)
   async forgotPassword(@Body("email") email: string) {
     await this.auth.requestPasswordReset(email);
@@ -148,6 +166,8 @@ export class AuthController {
 
   @Post("reset-password")
   @Throttle({ default: { limit: 10, ttl: 3_600_000 } })
+  @ApiBody({ type: ResetPasswordBodyDto })
+  @ApiResponse({ status: 200, type: MessageResponseDto })
   @HttpCode(200)
   @UsePipes(new ZodValidationPipe(resetPasswordRequestSchema))
   async resetPassword(@Body() body: ResetPasswordRequest) {
@@ -157,6 +177,7 @@ export class AuthController {
 
   @Get("sessions")
   @UseGuards(JwtAuthGuard)
+  @ApiResponse({ status: 200, type: [SessionResponseDto] })
   async listSessions(@CurrentUser() user: RequestWithUser["currentUser"], @Req() req: Request) {
     const currentSessionHash = req.cookies?.[REFRESH_COOKIE]
       ? this.tokens.hashOpaqueToken(req.cookies[REFRESH_COOKIE] as string)

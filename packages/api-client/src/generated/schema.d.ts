@@ -632,6 +632,190 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        RegisterBodyDto: {
+            email: string;
+            /** @description 12 caracteres minimum. */
+            password: string;
+            firstName: string;
+            lastName: string;
+        };
+        MessageResponseDto: {
+            message: string;
+        };
+        LoginBodyDto: {
+            email: string;
+            password: string;
+        };
+        AuthenticatedUserResponseDto: {
+            id: string;
+            email: string;
+            firstName: string;
+            lastName: string;
+            emailVerifiedAt?: Record<string, never> | null;
+            /** @enum {string} */
+            accountType: "INDIVIDUAL" | "COMPANY_MEMBER" | "STAFF";
+        };
+        ResetPasswordBodyDto: {
+            token: string;
+            /** @description 12 caracteres minimum. */
+            newPassword: string;
+        };
+        SessionResponseDto: {
+            id: string;
+            createdAt: string;
+            lastUsedAt: string;
+            userAgent?: Record<string, never> | null;
+            ipAddress?: Record<string, never> | null;
+            current: boolean;
+        };
+        BrandResponseDto: {
+            id: string;
+            slug: string;
+            name: string;
+            /** @enum {string} */
+            status: "DRAFT" | "ACTIVE" | "ARCHIVED";
+            displayOrder: number;
+            shortDescription?: Record<string, never> | null;
+            logoUrl?: Record<string, never> | null;
+        };
+        HardwareRevisionResponseDto: {
+            id: string;
+            code: string;
+            label: string;
+        };
+        DeviceVariantResponseDto: {
+            id: string;
+            name: string;
+            /** @enum {string} */
+            status: "DRAFT" | "ACTIVE" | "ARCHIVED";
+            revisions: components["schemas"]["HardwareRevisionResponseDto"][];
+        };
+        DeviceModelResponseDto: {
+            id: string;
+            slug: string;
+            name: string;
+            brandId: string;
+            familyId: string;
+            /** @enum {string} */
+            status: "DRAFT" | "ACTIVE" | "ARCHIVED";
+            shortDescription?: Record<string, never> | null;
+            longDescription?: Record<string, never> | null;
+            variants: components["schemas"]["DeviceVariantResponseDto"][];
+        };
+        CatalogRefResponseDto: {
+            id: string;
+            slug: string;
+            name: string;
+        };
+        DeviceModelDetailResponseDto: {
+            id: string;
+            slug: string;
+            name: string;
+            /** @enum {string} */
+            status: "DRAFT" | "ACTIVE" | "ARCHIVED";
+            shortDescription?: Record<string, never> | null;
+            longDescription?: Record<string, never> | null;
+            brand: components["schemas"]["CatalogRefResponseDto"];
+            family: components["schemas"]["CatalogRefResponseDto"];
+            variants: components["schemas"]["DeviceVariantResponseDto"][];
+        };
+        ServiceResponseDto: {
+            id: string;
+            slug: string;
+            name: string;
+            categoryId: string;
+            /** @enum {string} */
+            status: "DRAFT" | "ACTIVE" | "ARCHIVED";
+            basePrice: Record<string, never>;
+            shortDescription?: Record<string, never> | null;
+        };
+        ValidateConfigurationBodyDto: {
+            deviceModelId: string;
+            deviceVariantId: string;
+            hardwareRevisionId?: string;
+            serviceIds: string[];
+            /** @default [] */
+            optionIds: string[];
+        };
+        ConfigurationIssueResponseDto: {
+            /** @enum {string} */
+            type: "INCOMPATIBLE" | "REQUIRES" | "MISSING_REQUIRED_OPTION";
+            /** @enum {string} */
+            severity: "BLOCKING" | "INFO";
+            message: string;
+            relatedServiceId?: string;
+            relatedOptionId?: string;
+        };
+        ConfigurationRecommendationResponseDto: {
+            message: string;
+            relatedServiceId?: string;
+            relatedOptionId?: string;
+        };
+        ConfigurationPriceLineResponseDto: {
+            /** @enum {string} */
+            kind: "SERVICE" | "OPTION";
+            id: string;
+            name: string;
+            unitPriceMinor: number;
+            /** @example EUR */
+            currency: string;
+        };
+        ConfigurationPriceResponseDto: {
+            subtotalMinor: number;
+            discountMinor: number;
+            taxMinor: number;
+            totalMinor: number;
+            /** @example EUR */
+            currency: string;
+            breakdown: components["schemas"]["ConfigurationPriceLineResponseDto"][];
+        };
+        EstimatedLeadTimeResponseDto: {
+            min: number;
+            max: number;
+        };
+        ConfigurationResultResponseDto: {
+            valid: boolean;
+            issues: components["schemas"]["ConfigurationIssueResponseDto"][];
+            recommendations: components["schemas"]["ConfigurationRecommendationResponseDto"][];
+            price: components["schemas"]["ConfigurationPriceResponseDto"];
+            estimatedLeadTimeDays: components["schemas"]["EstimatedLeadTimeResponseDto"];
+        };
+        EnsureGuestCartResponseDto: {
+            cartId: string;
+        };
+        AddCartItemBodyDto: {
+            deviceModelId: string;
+            deviceVariantId: string;
+            hardwareRevisionId?: string;
+            serviceIds: string[];
+            /** @default [] */
+            optionIds: string[];
+            reportedIssue?: string;
+        };
+        CartItemResponseDto: {
+            id: string;
+            deviceModelName: string;
+            deviceVariantName: string;
+            serviceNames: string[];
+            optionNames: string[];
+            unitPriceMinor: number;
+            discountMinor: number;
+            taxAmountMinor: number;
+            totalMinor: number;
+            /** @example EUR */
+            currency: string;
+            reportedIssue?: Record<string, never> | null;
+        };
+        CartResponseDto: {
+            id: string;
+            items: components["schemas"]["CartItemResponseDto"][];
+            subtotalMinor: number;
+            discountMinor: number;
+            taxMinor: number;
+            totalMinor: number;
+            /** @example EUR */
+            currency: string;
+        };
         MergeCartResponseDto: {
             merged: boolean;
             cartId?: Record<string, never> | null;
@@ -758,13 +942,19 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MessageResponseDto"];
+                };
             };
         };
     };
@@ -781,7 +971,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MessageResponseDto"];
+                };
             };
         };
     };
@@ -792,9 +984,22 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginBodyDto"];
+            };
+        };
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthenticatedUserResponseDto"];
+                };
+            };
+            /** @description Identifiants invalides. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -815,7 +1020,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MessageResponseDto"];
+                };
             };
         };
     };
@@ -832,7 +1039,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MessageResponseDto"];
+                };
             };
         };
     };
@@ -849,7 +1058,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MessageResponseDto"];
+                };
             };
         };
     };
@@ -860,13 +1071,19 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MessageResponseDto"];
+                };
             };
         };
     };
@@ -883,7 +1100,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SessionResponseDto"][];
+                };
             };
         };
     };
@@ -900,7 +1119,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AuthenticatedUserResponseDto"];
+                };
             };
         };
     };
@@ -917,7 +1138,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BrandResponseDto"][];
+                };
             };
         };
     };
@@ -934,7 +1157,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DeviceModelResponseDto"][];
+                };
             };
         };
     };
@@ -951,6 +1176,15 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceModelDetailResponseDto"];
+                };
+            };
+            /** @description Modele introuvable. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -971,7 +1205,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ServiceResponseDto"][];
+                };
             };
         };
     };
@@ -1054,13 +1290,19 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValidateConfigurationBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ConfigurationResultResponseDto"];
+                };
             };
         };
     };
@@ -1077,7 +1319,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EnsureGuestCartResponseDto"];
+                };
             };
         };
     };
@@ -1090,13 +1334,19 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddCartItemBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CartResponseDto"];
+                };
             };
         };
     };
@@ -1109,13 +1359,19 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddCartItemBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CartResponseDto"];
+                };
             };
         };
     };
@@ -1153,7 +1409,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CartResponseDto"];
+                };
             };
         };
     };
@@ -1172,7 +1430,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CartResponseDto"];
+                };
             };
         };
     };

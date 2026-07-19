@@ -5,9 +5,26 @@
       "post": {
         "operationId": "AuthController_register",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -21,7 +38,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -33,9 +57,29 @@
       "post": {
         "operationId": "AuthController_login",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticatedUserResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Identifiants invalides."
           }
         },
         "tags": [
@@ -49,7 +93,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -63,7 +114,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -77,7 +135,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -89,9 +154,26 @@
       "post": {
         "operationId": "AuthController_resetPassword",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -105,7 +187,17 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -119,7 +211,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticatedUserResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -133,7 +232,17 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BrandResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -147,7 +256,17 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceModelResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -178,7 +297,17 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceModelDetailResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Modele introuvable."
           }
         },
         "tags": [
@@ -192,7 +321,17 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -274,9 +413,26 @@
       "post": {
         "operationId": "ConfiguratorController_validate",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateConfigurationBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationResultResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -290,7 +446,14 @@
         "parameters": [],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsureGuestCartResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -311,9 +474,26 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCartItemBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -334,9 +514,26 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCartItemBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -380,7 +577,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -403,7 +607,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -952,6 +1163,733 @@
       }
     },
     "schemas": {
+      "RegisterBodyDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "description": "12 caracteres minimum."
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "firstName",
+          "lastName"
+        ]
+      },
+      "MessageResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "LoginBodyDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "AuthenticatedUserResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "emailVerifiedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "accountType": {
+            "type": "string",
+            "enum": [
+              "INDIVIDUAL",
+              "COMPANY_MEMBER",
+              "STAFF"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "firstName",
+          "lastName",
+          "accountType"
+        ]
+      },
+      "ResetPasswordBodyDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "12 caracteres minimum."
+          }
+        },
+        "required": [
+          "token",
+          "newPassword"
+        ]
+      },
+      "SessionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "type": "string"
+          },
+          "userAgent": {
+            "type": "object",
+            "nullable": true
+          },
+          "ipAddress": {
+            "type": "object",
+            "nullable": true
+          },
+          "current": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "lastUsedAt",
+          "current"
+        ]
+      },
+      "BrandResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          },
+          "displayOrder": {
+            "type": "number"
+          },
+          "shortDescription": {
+            "type": "object",
+            "nullable": true
+          },
+          "logoUrl": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "status",
+          "displayOrder"
+        ]
+      },
+      "HardwareRevisionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "label"
+        ]
+      },
+      "DeviceVariantResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          },
+          "revisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HardwareRevisionResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "revisions"
+        ]
+      },
+      "DeviceModelResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "brandId": {
+            "type": "string"
+          },
+          "familyId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          },
+          "shortDescription": {
+            "type": "object",
+            "nullable": true
+          },
+          "longDescription": {
+            "type": "object",
+            "nullable": true
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceVariantResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "brandId",
+          "familyId",
+          "status",
+          "variants"
+        ]
+      },
+      "CatalogRefResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name"
+        ]
+      },
+      "DeviceModelDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          },
+          "shortDescription": {
+            "type": "object",
+            "nullable": true
+          },
+          "longDescription": {
+            "type": "object",
+            "nullable": true
+          },
+          "brand": {
+            "$ref": "#/components/schemas/CatalogRefResponseDto"
+          },
+          "family": {
+            "$ref": "#/components/schemas/CatalogRefResponseDto"
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceVariantResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "status",
+          "brand",
+          "family",
+          "variants"
+        ]
+      },
+      "ServiceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          },
+          "basePrice": {
+            "type": "object"
+          },
+          "shortDescription": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "categoryId",
+          "status",
+          "basePrice"
+        ]
+      },
+      "ValidateConfigurationBodyDto": {
+        "type": "object",
+        "properties": {
+          "deviceModelId": {
+            "type": "string"
+          },
+          "deviceVariantId": {
+            "type": "string"
+          },
+          "hardwareRevisionId": {
+            "type": "string"
+          },
+          "serviceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "optionIds": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "deviceModelId",
+          "deviceVariantId",
+          "serviceIds",
+          "optionIds"
+        ]
+      },
+      "ConfigurationIssueResponseDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "INCOMPATIBLE",
+              "REQUIRES",
+              "MISSING_REQUIRED_OPTION"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "BLOCKING",
+              "INFO"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "relatedServiceId": {
+            "type": "string"
+          },
+          "relatedOptionId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "severity",
+          "message"
+        ]
+      },
+      "ConfigurationRecommendationResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "relatedServiceId": {
+            "type": "string"
+          },
+          "relatedOptionId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "ConfigurationPriceLineResponseDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "SERVICE",
+              "OPTION"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "unitPriceMinor": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string",
+            "example": "EUR"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "name",
+          "unitPriceMinor",
+          "currency"
+        ]
+      },
+      "ConfigurationPriceResponseDto": {
+        "type": "object",
+        "properties": {
+          "subtotalMinor": {
+            "type": "number"
+          },
+          "discountMinor": {
+            "type": "number"
+          },
+          "taxMinor": {
+            "type": "number"
+          },
+          "totalMinor": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string",
+            "example": "EUR"
+          },
+          "breakdown": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConfigurationPriceLineResponseDto"
+            }
+          }
+        },
+        "required": [
+          "subtotalMinor",
+          "discountMinor",
+          "taxMinor",
+          "totalMinor",
+          "currency",
+          "breakdown"
+        ]
+      },
+      "EstimatedLeadTimeResponseDto": {
+        "type": "object",
+        "properties": {
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "min",
+          "max"
+        ]
+      },
+      "ConfigurationResultResponseDto": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConfigurationIssueResponseDto"
+            }
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConfigurationRecommendationResponseDto"
+            }
+          },
+          "price": {
+            "$ref": "#/components/schemas/ConfigurationPriceResponseDto"
+          },
+          "estimatedLeadTimeDays": {
+            "$ref": "#/components/schemas/EstimatedLeadTimeResponseDto"
+          }
+        },
+        "required": [
+          "valid",
+          "issues",
+          "recommendations",
+          "price",
+          "estimatedLeadTimeDays"
+        ]
+      },
+      "EnsureGuestCartResponseDto": {
+        "type": "object",
+        "properties": {
+          "cartId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cartId"
+        ]
+      },
+      "AddCartItemBodyDto": {
+        "type": "object",
+        "properties": {
+          "deviceModelId": {
+            "type": "string"
+          },
+          "deviceVariantId": {
+            "type": "string"
+          },
+          "hardwareRevisionId": {
+            "type": "string"
+          },
+          "serviceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "optionIds": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reportedIssue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deviceModelId",
+          "deviceVariantId",
+          "serviceIds",
+          "optionIds"
+        ]
+      },
+      "CartItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "deviceModelName": {
+            "type": "string"
+          },
+          "deviceVariantName": {
+            "type": "string"
+          },
+          "serviceNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "optionNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "unitPriceMinor": {
+            "type": "number"
+          },
+          "discountMinor": {
+            "type": "number"
+          },
+          "taxAmountMinor": {
+            "type": "number"
+          },
+          "totalMinor": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string",
+            "example": "EUR"
+          },
+          "reportedIssue": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "deviceModelName",
+          "deviceVariantName",
+          "serviceNames",
+          "optionNames",
+          "unitPriceMinor",
+          "discountMinor",
+          "taxAmountMinor",
+          "totalMinor",
+          "currency"
+        ]
+      },
+      "CartResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CartItemResponseDto"
+            }
+          },
+          "subtotalMinor": {
+            "type": "number"
+          },
+          "discountMinor": {
+            "type": "number"
+          },
+          "taxMinor": {
+            "type": "number"
+          },
+          "totalMinor": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string",
+            "example": "EUR"
+          }
+        },
+        "required": [
+          "id",
+          "items",
+          "subtotalMinor",
+          "discountMinor",
+          "taxMinor",
+          "totalMinor",
+          "currency"
+        ]
+      },
       "MergeCartResponseDto": {
         "type": "object",
         "properties": {

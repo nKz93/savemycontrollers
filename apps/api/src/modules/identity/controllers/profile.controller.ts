@@ -1,10 +1,11 @@
 import { Controller, Get, UseGuards } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard, type RequestWithUser } from "../guards/jwt-auth.guard.js";
 import { CurrentUser } from "../decorators/current-user.decorator.js";
 import { UserRepository } from "../repositories/user.repository.js";
 import { NotFoundDomainError } from "../../core/errors/domain-error.js";
 import type { AuthenticatedUserDto } from "@smc/contracts";
+import { AuthenticatedUserResponseDto } from "../swagger/auth.swagger-dto.js";
 
 @ApiTags("profile")
 @Controller("profile")
@@ -13,6 +14,7 @@ export class ProfileController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
+  @ApiResponse({ status: 200, type: AuthenticatedUserResponseDto })
   async me(@CurrentUser() current: RequestWithUser["currentUser"]): Promise<AuthenticatedUserDto> {
     const user = await this.users.findById(current!.id);
     if (!user) throw new NotFoundDomainError("Utilisateur introuvable.");

@@ -5,7 +5,47 @@ import type {
   OrderAddressSnapshotDto,
   OrderItemDetailDto,
   CreateOrderRequest,
+  CartDto,
+  CartItemDto,
+  AddCartItemRequest,
 } from "@smc/contracts";
+
+export class CartItemResponseDto implements CartItemDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() deviceModelName!: string;
+  @ApiProperty() deviceVariantName!: string;
+  @ApiProperty({ type: [String] }) serviceNames!: string[];
+  @ApiProperty({ type: [String] }) optionNames!: string[];
+  @ApiProperty() unitPriceMinor!: number;
+  @ApiProperty() discountMinor!: number;
+  @ApiProperty() taxAmountMinor!: number;
+  @ApiProperty() totalMinor!: number;
+  @ApiProperty({ example: "EUR" }) currency!: "EUR";
+  @ApiPropertyOptional({ nullable: true }) reportedIssue!: string | null;
+}
+
+export class CartResponseDto implements CartDto {
+  @ApiProperty() id!: string;
+  @ApiProperty({ type: [CartItemResponseDto] }) items!: CartItemResponseDto[];
+  @ApiProperty() subtotalMinor!: number;
+  @ApiProperty() discountMinor!: number;
+  @ApiProperty() taxMinor!: number;
+  @ApiProperty() totalMinor!: number;
+  @ApiProperty({ example: "EUR" }) currency!: "EUR";
+}
+
+export class AddCartItemBodyDto implements AddCartItemRequest {
+  @ApiProperty() deviceModelId!: string;
+  @ApiProperty() deviceVariantId!: string;
+  @ApiPropertyOptional() hardwareRevisionId?: string;
+  @ApiProperty({ type: [String] }) serviceIds!: string[];
+  @ApiProperty({ type: [String], default: [] }) optionIds!: string[];
+  @ApiPropertyOptional() reportedIssue?: string;
+}
+
+export class EnsureGuestCartResponseDto {
+  @ApiProperty() cartId!: string;
+}
 
 /**
  * Voir la remarque sur le `implements` obligatoire dans

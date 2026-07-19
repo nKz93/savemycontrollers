@@ -48,6 +48,18 @@ export interface ServiceDto {
   shortDescription: string | null;
 }
 
+export interface DeviceModelDetailDto {
+  id: string;
+  slug: string;
+  name: string;
+  status: PublishableStatus;
+  shortDescription: string | null;
+  longDescription: string | null;
+  brand: { id: string; slug: string; name: string };
+  family: { id: string; slug: string; name: string };
+  variants: DeviceVariantDto[];
+}
+
 export const createBrandSchema = z.object({
   slug: z.string().regex(/^[a-z0-9-]+$/),
   name: z.string().min(1).max(150),

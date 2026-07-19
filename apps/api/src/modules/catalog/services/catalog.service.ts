@@ -3,7 +3,7 @@ import { BrandRepository } from "../repositories/brand.repository.js";
 import { DeviceModelRepository } from "../repositories/device-model.repository.js";
 import { ServiceRepository } from "../repositories/service.repository.js";
 import { ConflictDomainError, NotFoundDomainError } from "../../core/errors/domain-error.js";
-import type { CreateBrandRequest, UpdateBrandRequest } from "@smc/contracts";
+import type { CreateBrandRequest, UpdateBrandRequest, DeviceModelDetailDto } from "@smc/contracts";
 
 @Injectable()
 export class CatalogService {
@@ -38,10 +38,25 @@ export class CatalogService {
     return variant.name;
   }
 
-  async getDeviceModelDetail(familySlug: string, modelSlug: string) {
+  async getDeviceModelDetail(familySlug: string, modelSlug: string): Promise<DeviceModelDetailDto> {
     const model = await this.deviceModels.findBySlugWithDetails(familySlug, modelSlug);
     if (!model) throw new NotFoundDomainError("Modele introuvable.");
-    return model;
+    return {
+      id: model.id,
+      slug: model.slug,
+      name: model.name,
+      status: model.status,
+      shortDescription: model.shortDescription,
+      longDescription: model.longDescription,
+      brand: { id: model.family.brand.id, slug: model.family.brand.slug, name: model.family.brand.name },
+      family: { id: model.family.id, slug: model.family.slug, name: model.family.name },
+      variants: model.variants.map((v) => ({
+        id: v.id,
+        name: v.name,
+        status: v.status,
+        revisions: v.revisions.map((r) => ({ id: r.id, code: r.code, label: r.label })),
+      })),
+    };
   }
 
   async isDeviceModelActive(deviceModelId: string): Promise<boolean> {
