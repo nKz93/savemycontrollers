@@ -11,6 +11,7 @@ import { PrismaClient } from "@prisma/client";
 import * as argon2 from "argon2";
 import { SEED_PERMISSIONS, SEED_ROLES } from "./permissions.js";
 import { SEED_REPAIR_STATUSES, SEED_REPAIR_TRANSITIONS } from "./repair-statuses.js";
+import { seedCatalogDemo } from "./catalog-demo.js";
 
 const prisma = new PrismaClient();
 
@@ -122,6 +123,14 @@ async function main(): Promise<void> {
   await seedRepairStatuses();
   await seedEssentialSettings();
   await seedLocalSuperAdmin();
+
+  // Catalogue de demonstration : jamais en production, uniquement local
+  // et environnements de validation fonctionnelle (staging/CI E2E).
+  if (process.env.NODE_ENV !== "production") {
+    await seedCatalogDemo(prisma);
+  } else {
+    console.log("NODE_ENV=production : catalogue de demonstration ignore.");
+  }
 }
 
 main()

@@ -1,0 +1,184 @@
+name: E2E (validation fonctionnelle)
+
+# Fait tourner la vraie stack (PostgreSQL, Redis, API compilee, worker
+# compile, apps/web compilee) et y execute de vrais tests Playwright avec
+# un vrai navigateur — c'est la "validation fonctionnelle en
+# preproduction" de ce projet : pas de staging persistant disponible
+# (aucun compte d'hebergement, registre Docker Hub inaccessible depuis le
+# sandbox de developpement — voir docs/development/docker-build-attempt-proof.txt),
+# mais une validation reelle, automatisee et reproductible a chaque run.
+#
+# Ce workflow n'a PAS ete execute depuis l'environnement de generation de
+# ce projet : ni le moteur Prisma, ni les binaires de navigateur Playwright
+# ne sont telechargeables depuis ce sandbox. Ecrit pour s'executer
+# reellement sur un runner GitHub Actions standard.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+env:
+  NODE_ENV: test
+  DATABASE_URL: postgresql://smc:smc_e2e_password@localhost:5432/smc_e2e?schema=public
+  REDIS_URL: redis://localhost:6379
+  STORAGE_ENDPOINT: http://localhost:9000
+  STORAGE_REGION: eu-west-3
+  STORAGE_BUCKET: smc-e2e
+  STORAGE_ACCESS_KEY_ID: smc_e2e_access_key
+  STORAGE_SECRET_ACCESS_KEY: smc_e2e_secret_key
+  SMTP_HOST: localhost
+  SMTP_PORT: "1025"
+  SMTP_FROM: "SaveMyControllers E2E <e2e@savemycontrollers.example>"
+  ACCESS_TOKEN_SECRET: e2e-only-access-token-secret-at-least-32-characters-long
+  CSRF_SECRET: e2e-only-csrf-secret-at-least-32-characters-long-too
+  JWT_ISSUER: savemycontrollers
+  JWT_AUDIENCE: savemycontrollers-api
+  API_URL: http://localhost:3001
+  NEXT_PUBLIC_API_URL: http://localhost:3001
+  CORS_ALLOWED_ORIGINS: http://localhost:3000
+  PAYLOAD_ENCRYPTION_KEY: Y2ktb25seS0zMi1ieXRlLWtleS1mb3ItdGVzdHMtb25seSEh
+  TRUSTED_PROXY_COUNT: "0"
+  E2E_BASE_URL: http://localhost:3000
+  E2E_API_URL: http://localhost:3001
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: smc
+          POSTGRES_PASSWORD: smc_e2e_password
+          POSTGRES_DB: smc_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U smc -d smc_e2e"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Installation
+        run: pnpm install --frozen-lockfile
+
+      - name: Generation du client Prisma
+        run: pnpm db:generate
+
+      - name: Application de la migration
+        run: pnpm db:migrate:deploy
+
+      - name: Seed (permissions, roles, ET catalogue de demonstration)
+        run: pnpm db:seed
+
+      - name: Verifie l'email des comptes crees pendant les tests (aucun serveur mail reel en CI)
+        run: |
+          cat << 'SQL' > /tmp/verify-e2e-emails.sql
+          -- Les comptes crees via /inscription pendant les tests E2E ont
+          -- besoin d'un email "verifie" pour se connecter (voir politique
+          -- de connexion). Aucun serveur SMTP reel n'est disponible en CI :
+          -- ce script marque verifies tous les comptes @e2e.test toutes les
+          -- 2 secondes pendant la duree des tests (voir etape suivante).
+          UPDATE users SET email_verified_at = NOW() WHERE email LIKE '%@e2e.test' AND email_verified_at IS NULL;
+          SQL
+          echo "Script pret (execute en boucle par l'etape 'Boucle de verification email')."
+
+      - name: Build de tous les packages et applications
+        run: pnpm build
+
+      - name: Demarrage de l'API compilee en arriere-plan
+        run: |
+          nohup node apps/api/dist/main.js > api.log 2>&1 &
+          echo $! > api.pid
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3001/health > /dev/null; then echo "API prete."; break; fi
+            sleep 1
+          done
+
+      - name: Demarrage du worker compile en arriere-plan
+        run: |
+          nohup node apps/worker/dist/main.js > worker.log 2>&1 &
+          echo $! > worker.pid
+          sleep 2
+
+      - name: Copie des ressources statiques dans le build standalone (non incluses par le tracage Next.js)
+        run: |
+          cp -r apps/web/public apps/web/.next/standalone/apps/web/public
+          mkdir -p apps/web/.next/standalone/apps/web/.next/static
+          cp -r apps/web/.next/static/* apps/web/.next/standalone/apps/web/.next/static/
+
+      - name: Demarrage de apps/web en arriere-plan
+        run: |
+          nohup node apps/web/.next/standalone/apps/web/server.js > web.log 2>&1 &
+          echo $! > web.pid
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/ > /dev/null; then echo "apps/web prete."; break; fi
+            sleep 1
+          done
+        env:
+          PORT: "3000"
+
+      - name: Boucle de verification email (arriere-plan, pour toute la duree des tests)
+        run: |
+          ( while true; do
+              PGPASSWORD=smc_e2e_password psql -h localhost -U smc -d smc_e2e -f /tmp/verify-e2e-emails.sql > /dev/null 2>&1 || true
+              sleep 2
+            done ) &
+          echo $! > verify-loop.pid
+
+      - name: Installation de Playwright et des navigateurs
+        working-directory: tests/e2e/playwright
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+
+      - name: Execution des tests E2E
+        working-directory: tests/e2e/playwright
+        run: npx playwright test
+
+      - name: Arret des processus en arriere-plan
+        if: always()
+        run: |
+          kill "$(cat verify-loop.pid)" 2>/dev/null || true
+          kill "$(cat web.pid)" 2>/dev/null || true
+          kill "$(cat worker.pid)" 2>/dev/null || true
+          kill "$(cat api.pid)" 2>/dev/null || true
+
+      - name: Publication du rapport Playwright (captures, videos, traces)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            tests/e2e/playwright/playwright-report/
+            tests/e2e/playwright/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Publication des logs applicatifs (API, worker, web)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-logs
+          path: |
+            api.log
+            worker.log
+            web.log
+          retention-days: 14
+          if-no-files-found: ignore
