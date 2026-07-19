@@ -39,7 +39,14 @@ env:
   API_URL: http://localhost:3001
   NEXT_PUBLIC_API_URL: http://localhost:3001
   CORS_ALLOWED_ORIGINS: http://localhost:3000
-  PAYLOAD_ENCRYPTION_KEY: Y2ktb25seS0zMi1ieXRlLWtleS1mb3ItdGVzdHMtb25seSEh
+  # BUG REEL CORRIGE : cette cle decodait en 36 octets, pas 32 (AES-256
+  # exige exactement 32 octets) — provoquait "Invalid key length" a
+  # chaque chiffrement, jamais detecte auparavant car aucun test
+  # unitaire/integration existant n'exerce ce chemin via un vrai appel
+  # HTTP (tous mockent le chiffrement). Meme cle generatrice utilisee
+  # dans .github/workflows/ci.yml (bug latent identique corrige la-bas
+  # aussi, jamais declenche par la CI existante pour la meme raison).
+  PAYLOAD_ENCRYPTION_KEY: zUu4Pk233CU08Cb5McABKALj14DfL0ckN4KxCjHi6Pg=
   TRUSTED_PROXY_COUNT: "0"
   # La suite E2E genere legitimement bien plus de requetes/minute qu'un
   # utilisateur reel depuis une seule IP (le runner CI) : seuil global
