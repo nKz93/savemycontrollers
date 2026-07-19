@@ -20,7 +20,7 @@ async function registerAndLogin(page: Page, prefix: string): Promise<{ email: st
 
   await page.goto("/inscription");
   await page.getByLabel("Prenom").fill("Test");
-  await page.getByLabel("Nom").fill("E2E");
+  await page.getByLabel("Nom", { exact: true }).fill("E2E");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Mot de passe", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Creer mon compte" }).click();
@@ -41,7 +41,7 @@ async function registerAndLogin(page: Page, prefix: string): Promise<{ email: st
 
 async function addStickDriftRepairToCart(page: Page): Promise<void> {
   await page.goto(`/configurateur/${MODEL_FAMILY_SLUG}/${MODEL_SLUG}`);
-  await page.getByLabel("Prestations souhaitees").getByText("Correction de stick drift").click();
+  await page.getByRole("checkbox", { name: /Correction de stick drift/ }).click();
   await expect(page.getByText("Total")).toBeVisible({ timeout: 10_000 });
   await page.getByRole("button", { name: "Ajouter au panier" }).click();
   await expect(page.getByText("Ajoute au panier.")).toBeVisible();
@@ -51,13 +51,13 @@ test.describe("Parcours client transactionnel — validation fonctionnelle reell
   test("catalogue -> fiche modele -> configurateur affiche prix et delai calcules par le serveur", async ({ page }) => {
     await page.goto("/catalogue");
     await expect(page.getByRole("heading", { name: "Catalogue" })).toBeVisible();
-    await expect(page.getByText("DualSense")).toBeVisible();
+    await expect(page.getByRole("link", { name: "DualSense", exact: true })).toBeVisible();
 
-    await page.getByRole("link", { name: /DualSense$/ }).first().click();
-    await expect(page.getByRole("heading", { name: /DualSense/ })).toBeVisible();
+    await page.getByRole("link", { name: "DualSense", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Sony DualSense", exact: true })).toBeVisible();
 
     await page.getByRole("link", { name: "Configurer une reparation" }).first().click();
-    await page.getByText("Correction de stick drift").click();
+    await page.getByRole("checkbox", { name: /Correction de stick drift/ }).click();
 
     // Prix ET delai doivent apparaitre — tous deux calcules par l'API, jamais par le navigateur.
     await expect(page.getByText(/jours ouvres/)).toBeVisible({ timeout: 10_000 });
@@ -66,30 +66,30 @@ test.describe("Parcours client transactionnel — validation fonctionnelle reell
 
   test("incompatibilite serveur : les boutons arriere (Edge) sont refuses sur la DualSense standard", async ({ page }) => {
     await page.goto(`/configurateur/${MODEL_FAMILY_SLUG}/${MODEL_SLUG}`);
-    await page.getByText("Remplacement des boutons arriere (Edge)").click();
+    await page.getByRole("checkbox", { name: /Remplacement des boutons arriere \(Edge\)/ }).click();
     await expect(page.getByText(/pas compatible avec le modele/)).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("button", { name: "Ajouter au panier" })).toBeDisabled();
   });
 
   test("dependance obligatoire : les boutons arriere exigent un nettoyage complet", async ({ page }) => {
     await page.goto(`/configurateur/playstation/dualsense-edge`);
-    await page.getByText("Remplacement des boutons arriere (Edge)").click();
+    await page.getByRole("checkbox", { name: /Remplacement des boutons arriere \(Edge\)/ }).click();
     await expect(page.getByText(/necessite une prestation complementaire/)).toBeVisible({ timeout: 10_000 });
 
-    await page.getByText("Nettoyage complet", { exact: true }).click();
+    await page.getByRole("checkbox", { name: /^Nettoyage complet/ }).click();
     await expect(page.getByText(/necessite une prestation complementaire/)).not.toBeVisible({ timeout: 10_000 });
   });
 
   test("exclusion mutuelle : reparation express et personnalisation ne peuvent pas etre combinees", async ({ page }) => {
     await page.goto(`/configurateur/${MODEL_FAMILY_SLUG}/${MODEL_SLUG}`);
-    await page.getByText("Reparation express (24h)").click();
-    await page.getByText("Personnalisation de la coque").click();
+    await page.getByRole("checkbox", { name: /Reparation express \(24h\)/ }).click();
+    await page.getByRole("checkbox", { name: /Personnalisation de la coque/ }).click();
     await expect(page.getByText(/ne peuvent pas etre combinees|ne peut pas etre combine/)).toBeVisible({ timeout: 10_000 });
   });
 
   test("recommandation non bloquante : conseil de nettoyage avec la correction de stick drift", async ({ page }) => {
     await page.goto(`/configurateur/${MODEL_FAMILY_SLUG}/${MODEL_SLUG}`);
-    await page.getByText("Correction de stick drift").click();
+    await page.getByRole("checkbox", { name: /Correction de stick drift/ }).click();
     await expect(page.getByText(/recommandons un nettoyage complet/)).toBeVisible({ timeout: 10_000 });
     // Non bloquant : le bouton doit rester utilisable.
     await expect(page.getByRole("button", { name: "Ajouter au panier" })).toBeEnabled();
@@ -104,11 +104,11 @@ test.describe("Parcours client transactionnel — validation fonctionnelle reell
     expect(guestCookie?.httpOnly).toBe(true);
 
     await page.goto("/panier");
-    await expect(page.getByText("DualSense")).toBeVisible();
+    await expect(page.getByText("DualSense").first()).toBeVisible();
 
     // Persistance apres rafraichissement (pas seulement en memoire cote client).
     await page.reload();
-    await expect(page.getByText("DualSense")).toBeVisible();
+    await expect(page.getByText("DualSense").first()).toBeVisible();
   });
 
   test("CSRF : une requete mutante directe sans jeton est refusee par l'API", async ({ page, context }) => {
@@ -135,7 +135,7 @@ test.describe("Parcours client transactionnel — validation fonctionnelle reell
     await page.goto("/panier");
     // L'article ajoute avant connexion doit apparaitre dans le panier du
     // compte desormais authentifie (fusion reelle, pas juste visuelle).
-    await expect(page.getByText("DualSense")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("DualSense").first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("controle de propriete : un client ne peut pas consulter l'adresse d'un autre compte", async ({ browser }) => {
@@ -183,7 +183,7 @@ test.describe("Parcours client transactionnel — validation fonctionnelle reell
     await page.getByLabel("Email").fill("inconnu-e2e@test.local");
     await page.getByLabel("Mot de passe").fill("MauvaisMotDePasse123!");
     await page.getByRole("button", { name: "Se connecter" }).click();
-    await expect(page.getByRole("alert")).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator(".smc-alert--error")).toBeVisible({ timeout: 10_000 });
   });
 
   test("creation de commande idempotente : deux soumissions rapides ne creent qu'une seule commande", async ({ page }) => {

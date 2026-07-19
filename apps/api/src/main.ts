@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { randomUUID } from "node:crypto";
 import { NestFactory } from "@nestjs/core";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
@@ -43,6 +44,34 @@ async function bootstrap(): Promise<void> {
     res.json({ csrfToken: generateToken(req as any, res as any) });
   });
   app.use(doubleCsrfProtection);
+  // BUG REEL CORRIGE : doubleCsrfProtection est un middleware Express brut,
+  // enregistre AVANT que NestJS ne prenne la main sur la requete. Les
+  // erreurs qu'il leve (jeton CSRF manquant ou invalide) ne passent donc
+  // JAMAIS par HttpExceptionFilter (qui ne s'applique qu'au pipeline
+  // NestJS lui-meme) : sans ce gestionnaire d'erreur Express dedie, une
+  // requete mutante sans jeton CSRF valide remontait comme une erreur 500
+  // non structuree plutot qu'un 403 clair — verifie par un test E2E reel
+  // contre l'API reelle (voir tests/e2e/playwright).
+  app.use((err: unknown, req: { headers: Record<string, string | string[] | undefined> }, res: { status: (code: number) => { json: (body: unknown) => void } }, next: (err?: unknown) => void) => {
+    // csrf-csrf leve une erreur http-errors avec le code exact
+    // "EBADCSRFTOKEN" (voir node_modules/csrf-csrf) : verification precise,
+    // pas une correspondance approximative sur le message ou le nom
+    // generique de la classe d'erreur (qui pourrait entrer en collision
+    // avec d'autres 403 legitimes ailleurs dans l'application).
+    const isCsrfError = typeof err === "object" && err !== null && "code" in err && (err as { code?: unknown }).code === "EBADCSRFTOKEN";
+    if (!isCsrfError) {
+      next(err);
+      return;
+    }
+    const correlationId = (req.headers["x-correlation-id"] as string | undefined) ?? randomUUID();
+    res.status(403).json({
+      error: {
+        code: "CSRF_TOKEN_INVALID",
+        message: "Jeton CSRF manquant ou invalide.",
+        correlationId,
+      },
+    });
+  });
 
   // Aucune reponse liee a l'authentification ou aux jetons ne doit etre
   // mise en cache (par le navigateur ou un intermediaire) — voir section 7
