@@ -6,7 +6,7 @@
     "build": "next build",
     "dev": "next dev -p 3000",
     "start": "next start -p 3000",
-    "lint": "eslint app --ext .ts,.tsx",
+    "lint": "eslint app lib components --ext .ts,.tsx",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
