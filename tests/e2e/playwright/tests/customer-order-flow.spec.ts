@@ -24,7 +24,16 @@ async function registerAndLogin(page: Page, prefix: string): Promise<{ email: st
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Mot de passe", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Creer mon compte" }).click();
-  await expect(page.getByText("Compte cree")).toBeVisible({ timeout: 15_000 });
+  try {
+    await expect(page.getByText("Compte cree")).toBeVisible({ timeout: 15_000 });
+  } catch (err) {
+    const errorAlertText = await page.locator(".smc-alert--error").allTextContents();
+    // eslint-disable-next-line no-console
+    console.log("DIAGNOSTIC registerAndLogin (inscription) — contenu de .smc-alert--error :", JSON.stringify(errorAlertText));
+    // eslint-disable-next-line no-console
+    console.log("DIAGNOSTIC registerAndLogin (inscription) — URL courante :", page.url());
+    throw err;
+  }
 
   // Le compte de demonstration doit etre verifie manuellement en base
   // dans ce scenario E2E (aucun envoi d'email reel n'est disponible en
@@ -44,7 +53,19 @@ async function addStickDriftRepairToCart(page: Page): Promise<void> {
   await page.getByRole("checkbox", { name: /Correction de stick drift/ }).click();
   await expect(page.getByText("Total", { exact: true })).toBeVisible({ timeout: 10_000 });
   await page.getByRole("button", { name: "Ajouter au panier" }).click();
-  await expect(page.getByText("Ajoute au panier.")).toBeVisible({ timeout: 10_000 });
+  try {
+    await expect(page.getByText("Ajoute au panier.")).toBeVisible({ timeout: 10_000 });
+  } catch (err) {
+    // DIAGNOSTIC : capture le message d'erreur reel affiche par
+    // <ApiErrorAlert>, s'il y en a un, directement dans le journal CI —
+    // evite d'avoir a telecharger l'artefact de rapport pour diagnostiquer.
+    const errorAlertText = await page.locator(".smc-alert--error").allTextContents();
+    // eslint-disable-next-line no-console
+    console.log("DIAGNOSTIC addStickDriftRepairToCart — contenu de .smc-alert--error :", JSON.stringify(errorAlertText));
+    // eslint-disable-next-line no-console
+    console.log("DIAGNOSTIC addStickDriftRepairToCart — URL courante :", page.url());
+    throw err;
+  }
 }
 
 test.describe("Parcours client transactionnel — validation fonctionnelle reelle", () => {
