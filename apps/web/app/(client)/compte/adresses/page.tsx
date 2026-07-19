@@ -85,7 +85,7 @@ export default function AddressesPage() {
         {addresses.map((address) => (
           <li key={address.id} className="smc-card">
             <strong>{address.label || address.recipientName}</strong>
-            <span>{address.recipientName}</span>
+            {address.label && <span>{address.recipientName}</span>}
             <span>
               {address.line1}
               {address.line2 ? `, ${address.line2}` : ""}

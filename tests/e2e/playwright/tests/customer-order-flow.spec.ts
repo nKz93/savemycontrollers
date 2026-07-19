@@ -191,7 +191,7 @@ test.describe("Parcours client transactionnel — validation fonctionnelle reell
     await pageA.getByLabel("Code postal").fill("75000");
     await pageA.getByLabel("Ville").fill("Paris");
     await pageA.getByRole("button", { name: "Enregistrer" }).click();
-    await expect(pageA.getByText("Client A")).toBeVisible({ timeout: 10_000 });
+    await expect(pageA.getByText("Client A").first()).toBeVisible({ timeout: 10_000 });
 
     const addressId = await pageA.evaluate(async (apiUrl) => {
       const res = await fetch(`${apiUrl}/addresses`, { credentials: "include" });
@@ -243,7 +243,7 @@ test.describe("Parcours client transactionnel — validation fonctionnelle reell
     await page.getByLabel("Code postal").fill("75000");
     await page.getByLabel("Ville").fill("Paris");
     await page.getByRole("button", { name: "Enregistrer" }).click();
-    await expect(page.getByText("Client Checkout")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Client Checkout").first()).toBeVisible({ timeout: 10_000 });
 
     await page.goto("/checkout");
     await expect(page.getByRole("button", { name: "Valider la commande" })).toBeEnabled({ timeout: 10_000 });
