@@ -69,6 +69,26 @@ async function addStickDriftRepairToCart(page: Page): Promise<void> {
 }
 
 test.describe("Parcours client transactionnel — validation fonctionnelle reelle", () => {
+  test.beforeEach(async ({ page }) => {
+    // DIAGNOSTIC global : journalise le corps complet (y compris
+    // debugDetail hors production) de toute reponse API en erreur —
+    // complement des diagnostics locaux ci-dessus, sans devoir deviner
+    // quel appel precis a echoue.
+    page.on("response", (response) => {
+      if (response.url().includes(API_URL) && response.status() >= 400) {
+        response
+          .json()
+          .then((body) => {
+            // eslint-disable-next-line no-console
+            console.log(`DIAGNOSTIC reseau — ${response.status()} ${response.url()} :`, JSON.stringify(body));
+          })
+          .catch(() => {
+            /* corps non-JSON, rien a journaliser */
+          });
+      }
+    });
+  });
+
   test("catalogue -> fiche modele -> configurateur affiche prix et delai calcules par le serveur", async ({ page }) => {
     await page.goto("/catalogue");
     await expect(page.getByRole("heading", { name: "Catalogue" })).toBeVisible();
