@@ -651,7 +651,7 @@ export interface components {
             email: string;
             firstName: string;
             lastName: string;
-            emailVerifiedAt?: Record<string, never> | null;
+            emailVerifiedAt?: string | null;
             /** @enum {string} */
             accountType: "INDIVIDUAL" | "COMPANY_MEMBER" | "STAFF";
         };
@@ -664,8 +664,8 @@ export interface components {
             id: string;
             createdAt: string;
             lastUsedAt: string;
-            userAgent?: Record<string, never> | null;
-            ipAddress?: Record<string, never> | null;
+            userAgent?: string | null;
+            ipAddress?: string | null;
             current: boolean;
         };
         BrandResponseDto: {
@@ -675,8 +675,8 @@ export interface components {
             /** @enum {string} */
             status: "DRAFT" | "ACTIVE" | "ARCHIVED";
             displayOrder: number;
-            shortDescription?: Record<string, never> | null;
-            logoUrl?: Record<string, never> | null;
+            shortDescription?: string | null;
+            logoUrl?: string | null;
         };
         HardwareRevisionResponseDto: {
             id: string;
@@ -696,10 +696,11 @@ export interface components {
             name: string;
             brandId: string;
             familyId: string;
+            familySlug: string;
             /** @enum {string} */
             status: "DRAFT" | "ACTIVE" | "ARCHIVED";
-            shortDescription?: Record<string, never> | null;
-            longDescription?: Record<string, never> | null;
+            shortDescription?: string | null;
+            longDescription?: string | null;
             variants: components["schemas"]["DeviceVariantResponseDto"][];
         };
         CatalogRefResponseDto: {
@@ -713,11 +714,23 @@ export interface components {
             name: string;
             /** @enum {string} */
             status: "DRAFT" | "ACTIVE" | "ARCHIVED";
-            shortDescription?: Record<string, never> | null;
-            longDescription?: Record<string, never> | null;
+            shortDescription?: string | null;
+            longDescription?: string | null;
             brand: components["schemas"]["CatalogRefResponseDto"];
             family: components["schemas"]["CatalogRefResponseDto"];
             variants: components["schemas"]["DeviceVariantResponseDto"][];
+        };
+        MoneyResponseDto: {
+            amountMinor: number;
+            /** @example EUR */
+            currency: string;
+        };
+        ServiceOptionResponseDto: {
+            id: string;
+            slug: string;
+            name: string;
+            isRequired: boolean;
+            extraPrice: components["schemas"]["MoneyResponseDto"];
         };
         ServiceResponseDto: {
             id: string;
@@ -726,8 +739,9 @@ export interface components {
             categoryId: string;
             /** @enum {string} */
             status: "DRAFT" | "ACTIVE" | "ARCHIVED";
-            basePrice: Record<string, never>;
-            shortDescription?: Record<string, never> | null;
+            basePrice: components["schemas"]["MoneyResponseDto"];
+            shortDescription?: string | null;
+            options: components["schemas"]["ServiceOptionResponseDto"][];
         };
         ValidateConfigurationBodyDto: {
             deviceModelId: string;
@@ -804,7 +818,7 @@ export interface components {
             totalMinor: number;
             /** @example EUR */
             currency: string;
-            reportedIssue?: Record<string, never> | null;
+            reportedIssue?: string | null;
         };
         CartResponseDto: {
             id: string;
@@ -818,7 +832,7 @@ export interface components {
         };
         MergeCartResponseDto: {
             merged: boolean;
-            cartId?: Record<string, never> | null;
+            cartId?: string | null;
         };
         CreateOrderBodyDto: {
             cartId: string;
@@ -827,13 +841,13 @@ export interface components {
         };
         OrderAddressSnapshotResponseDto: {
             recipientName: string;
-            companyName?: Record<string, never> | null;
+            companyName?: string | null;
             line1: string;
-            line2?: Record<string, never> | null;
+            line2?: string | null;
             postalCode: string;
             city: string;
             country: string;
-            phone?: Record<string, never> | null;
+            phone?: string | null;
         };
         OrderLineComponentResponseDto: {
             name: string;
@@ -843,15 +857,15 @@ export interface components {
             id: string;
             deviceModelName: string;
             deviceVariantName: string;
-            hardwareRevisionLabel?: Record<string, never> | null;
-            reportedIssue?: Record<string, never> | null;
+            hardwareRevisionLabel?: string | null;
+            reportedIssue?: string | null;
             unitPriceMinor: number;
             discountMinor: number;
             taxAmountMinor: number;
             totalMinor: number;
             services: components["schemas"]["OrderLineComponentResponseDto"][];
             options: components["schemas"]["OrderLineComponentResponseDto"][];
-            repairCaseId?: Record<string, never> | null;
+            repairCaseId?: string | null;
         };
         OrderDetailResponseDto: {
             id: string;
@@ -886,15 +900,15 @@ export interface components {
         };
         AddressResponseDto: {
             id: string;
-            label?: Record<string, never> | null;
+            label?: string | null;
             recipientName: string;
             line1: string;
-            line2?: Record<string, never> | null;
+            line2?: string | null;
             postalCode: string;
             city: string;
             /** @example FR */
             country: string;
-            phone?: Record<string, never> | null;
+            phone?: string | null;
             isDefaultBilling: boolean;
             isDefaultShipping: boolean;
         };

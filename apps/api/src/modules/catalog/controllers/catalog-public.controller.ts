@@ -44,6 +44,7 @@ export class CatalogPublicController {
       name: m.name,
       brandId: m.family.brandId,
       familyId: m.familyId,
+      familySlug: m.family.slug,
       status: m.status,
       shortDescription: m.shortDescription,
       longDescription: m.longDescription,
@@ -75,6 +76,13 @@ export class CatalogPublicController {
       status: s.status,
       basePrice: { amountMinor: s.basePriceMinor, currency: s.currency },
       shortDescription: s.shortDescription,
+      options: s.options.map((o) => ({
+        id: o.id,
+        slug: o.slug,
+        name: o.name,
+        isRequired: o.isRequired,
+        extraPrice: { amountMinor: o.extraPriceMinor, currency: o.currency },
+      })),
     }));
   }
 }

@@ -1229,7 +1229,7 @@
             "type": "string"
           },
           "emailVerifiedAt": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "accountType": {
@@ -1278,11 +1278,11 @@
             "type": "string"
           },
           "userAgent": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "ipAddress": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "current": {
@@ -1320,11 +1320,11 @@
             "type": "number"
           },
           "shortDescription": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "logoUrl": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           }
         },
@@ -1404,6 +1404,9 @@
           "familyId": {
             "type": "string"
           },
+          "familySlug": {
+            "type": "string"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -1413,11 +1416,11 @@
             ]
           },
           "shortDescription": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "longDescription": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "variants": {
@@ -1433,6 +1436,7 @@
           "name",
           "brandId",
           "familyId",
+          "familySlug",
           "status",
           "variants"
         ]
@@ -1477,11 +1481,11 @@
             ]
           },
           "shortDescription": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "longDescription": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "brand": {
@@ -1505,6 +1509,49 @@
           "brand",
           "family",
           "variants"
+        ]
+      },
+      "MoneyResponseDto": {
+        "type": "object",
+        "properties": {
+          "amountMinor": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string",
+            "example": "EUR"
+          }
+        },
+        "required": [
+          "amountMinor",
+          "currency"
+        ]
+      },
+      "ServiceOptionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isRequired": {
+            "type": "boolean"
+          },
+          "extraPrice": {
+            "$ref": "#/components/schemas/MoneyResponseDto"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "isRequired",
+          "extraPrice"
         ]
       },
       "ServiceResponseDto": {
@@ -1531,11 +1578,17 @@
             ]
           },
           "basePrice": {
-            "type": "object"
+            "$ref": "#/components/schemas/MoneyResponseDto"
           },
           "shortDescription": {
-            "type": "object",
+            "type": "string",
             "nullable": true
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceOptionResponseDto"
+            }
           }
         },
         "required": [
@@ -1544,7 +1597,8 @@
           "name",
           "categoryId",
           "status",
-          "basePrice"
+          "basePrice",
+          "options"
         ]
       },
       "ValidateConfigurationBodyDto": {
@@ -1834,7 +1888,7 @@
             "example": "EUR"
           },
           "reportedIssue": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           }
         },
@@ -1897,7 +1951,7 @@
             "type": "boolean"
           },
           "cartId": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           }
         },
@@ -1931,14 +1985,14 @@
             "type": "string"
           },
           "companyName": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "line1": {
             "type": "string"
           },
           "line2": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "postalCode": {
@@ -1951,7 +2005,7 @@
             "type": "string"
           },
           "phone": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           }
         },
@@ -1991,11 +2045,11 @@
             "type": "string"
           },
           "hardwareRevisionLabel": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "reportedIssue": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "unitPriceMinor": {
@@ -2023,7 +2077,7 @@
             }
           },
           "repairCaseId": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           }
         },
@@ -2171,7 +2225,7 @@
             "type": "string"
           },
           "label": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "recipientName": {
@@ -2181,7 +2235,7 @@
             "type": "string"
           },
           "line2": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "postalCode": {
@@ -2195,7 +2249,7 @@
             "example": "FR"
           },
           "phone": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "isDefaultBilling": {

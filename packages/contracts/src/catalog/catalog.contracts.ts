@@ -19,6 +19,7 @@ export interface DeviceModelDto {
   name: string;
   brandId: string;
   familyId: string;
+  familySlug: string;
   status: PublishableStatus;
   shortDescription: string | null;
   longDescription: string | null;
@@ -38,6 +39,14 @@ export interface HardwareRevisionDto {
   label: string;
 }
 
+export interface ServiceOptionDto {
+  id: string;
+  slug: string;
+  name: string;
+  isRequired: boolean;
+  extraPrice: { amountMinor: number; currency: "EUR" };
+}
+
 export interface ServiceDto {
   id: string;
   slug: string;
@@ -46,6 +55,7 @@ export interface ServiceDto {
   status: PublishableStatus;
   basePrice: { amountMinor: number; currency: "EUR" };
   shortDescription: string | null;
+  options: ServiceOptionDto[];
 }
 
 export interface DeviceModelDetailDto {

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import type { BrandDto, DeviceModelDto, DeviceVariantDto, HardwareRevisionDto, ServiceDto, DeviceModelDetailDto } from "@smc/contracts";
+import type { BrandDto, DeviceModelDto, DeviceVariantDto, HardwareRevisionDto, ServiceDto, ServiceOptionDto, DeviceModelDetailDto } from "@smc/contracts";
+import { MoneyResponseDto } from "../../core/swagger/money.swagger-dto.js";
 
 export class HardwareRevisionResponseDto implements HardwareRevisionDto {
   @ApiProperty() id!: string;
@@ -20,8 +21,8 @@ export class BrandResponseDto implements BrandDto {
   @ApiProperty() name!: string;
   @ApiProperty({ enum: ["DRAFT", "ACTIVE", "ARCHIVED"] }) status!: BrandDto["status"];
   @ApiProperty() displayOrder!: number;
-  @ApiPropertyOptional({ nullable: true }) shortDescription!: string | null;
-  @ApiPropertyOptional({ nullable: true }) logoUrl!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) shortDescription!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) logoUrl!: string | null;
 }
 
 export class DeviceModelResponseDto implements DeviceModelDto {
@@ -30,9 +31,10 @@ export class DeviceModelResponseDto implements DeviceModelDto {
   @ApiProperty() name!: string;
   @ApiProperty() brandId!: string;
   @ApiProperty() familyId!: string;
+  @ApiProperty() familySlug!: string;
   @ApiProperty({ enum: ["DRAFT", "ACTIVE", "ARCHIVED"] }) status!: DeviceModelDto["status"];
-  @ApiPropertyOptional({ nullable: true }) shortDescription!: string | null;
-  @ApiPropertyOptional({ nullable: true }) longDescription!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) shortDescription!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) longDescription!: string | null;
   @ApiProperty({ type: [DeviceVariantResponseDto] }) variants!: DeviceVariantResponseDto[];
 }
 
@@ -47,11 +49,19 @@ export class DeviceModelDetailResponseDto implements DeviceModelDetailDto {
   @ApiProperty() slug!: string;
   @ApiProperty() name!: string;
   @ApiProperty({ enum: ["DRAFT", "ACTIVE", "ARCHIVED"] }) status!: DeviceModelDetailDto["status"];
-  @ApiPropertyOptional({ nullable: true }) shortDescription!: string | null;
-  @ApiPropertyOptional({ nullable: true }) longDescription!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) shortDescription!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) longDescription!: string | null;
   @ApiProperty({ type: CatalogRefResponseDto }) brand!: CatalogRefResponseDto;
   @ApiProperty({ type: CatalogRefResponseDto }) family!: CatalogRefResponseDto;
   @ApiProperty({ type: [DeviceVariantResponseDto] }) variants!: DeviceVariantResponseDto[];
+}
+
+export class ServiceOptionResponseDto implements ServiceOptionDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() slug!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty() isRequired!: boolean;
+  @ApiProperty({ type: MoneyResponseDto }) extraPrice!: MoneyResponseDto;
 }
 
 export class ServiceResponseDto implements ServiceDto {
@@ -60,6 +70,7 @@ export class ServiceResponseDto implements ServiceDto {
   @ApiProperty() name!: string;
   @ApiProperty() categoryId!: string;
   @ApiProperty({ enum: ["DRAFT", "ACTIVE", "ARCHIVED"] }) status!: ServiceDto["status"];
-  @ApiProperty() basePrice!: { amountMinor: number; currency: "EUR" };
-  @ApiPropertyOptional({ nullable: true }) shortDescription!: string | null;
+  @ApiProperty({ type: MoneyResponseDto }) basePrice!: MoneyResponseDto;
+  @ApiPropertyOptional({ type: String, nullable: true }) shortDescription!: string | null;
+  @ApiProperty({ type: [ServiceOptionResponseDto] }) options!: ServiceOptionResponseDto[];
 }

@@ -16,7 +16,7 @@ export function createApiClient(options: { baseUrl: string }) {
   return createClient<paths>({ baseUrl: options.baseUrl, credentials: "include" });
 }
 
-export type { paths } from "./generated/schema.js";
+export type { paths, components } from "./generated/schema.js";
 
 // Les DTO partages restent disponibles pour les cas ou un type structurel
 // (independant du contrat HTTP genere) est suffisant, par exemple pour
