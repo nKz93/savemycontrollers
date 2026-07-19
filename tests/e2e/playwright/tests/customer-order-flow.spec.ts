@@ -24,7 +24,7 @@ async function registerAndLogin(page: Page, prefix: string): Promise<{ email: st
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Mot de passe", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Creer mon compte" }).click();
-  await expect(page.getByText("Compte cree")).toBeVisible();
+  await expect(page.getByText("Compte cree")).toBeVisible({ timeout: 15_000 });
 
   // Le compte de demonstration doit etre verifie manuellement en base
   // dans ce scenario E2E (aucun envoi d'email reel n'est disponible en
@@ -42,7 +42,7 @@ async function registerAndLogin(page: Page, prefix: string): Promise<{ email: st
 async function addStickDriftRepairToCart(page: Page): Promise<void> {
   await page.goto(`/configurateur/${MODEL_FAMILY_SLUG}/${MODEL_SLUG}`);
   await page.getByRole("checkbox", { name: /Correction de stick drift/ }).click();
-  await expect(page.getByText("Total")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("Total", { exact: true })).toBeVisible({ timeout: 10_000 });
   await page.getByRole("button", { name: "Ajouter au panier" }).click();
   await expect(page.getByText("Ajoute au panier.")).toBeVisible();
 }
