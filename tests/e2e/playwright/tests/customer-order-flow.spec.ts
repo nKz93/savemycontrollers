@@ -248,13 +248,43 @@ test.describe("Parcours client transactionnel — validation fonctionnelle reell
     await page.goto("/checkout");
     await expect(page.getByRole("button", { name: "Valider la commande" })).toBeEnabled({ timeout: 10_000 });
 
-    // Deux clics rapproches sur le meme bouton (simule un double-clic ou
-    // une double soumission reseau) : verifie directement en base via
-    // l'API qu'une seule commande existe pour ce compte.
-    const button = page.getByRole("button", { name: "Valider la commande" });
-    await Promise.all([button.click(), button.click({ force: true }).catch(() => undefined)]);
+    // Deux soumissions reseau CONCURRENTES directes vers POST /orders
+    // (memes cartId/adresses), plutot qu'une course de deux clics UI : le
+    // bouton devient immediatement desactive des le premier clic (etat
+    // React), rendant une vraie course au niveau du clic peu fiable en
+    // environnement headless. Ceci teste directement la garantie qui
+    // compte reellement : le serveur reste idempotent quel que soit ce
+    // que fait l'interface, exactement le scenario couvert par le test
+    // d'integration reel (order-concurrency.integration.spec.ts), mais
+    // ici via le navigateur reel (vrais cookies, vrai jeton CSRF).
+    const { cartId, billingAddressId, shippingAddressId, csrfToken } = await page.evaluate(async (apiUrl) => {
+      const [cartRes, addressesRes, csrfRes] = await Promise.all([
+        fetch(`${apiUrl}/cart/mine`, { credentials: "include" }),
+        fetch(`${apiUrl}/addresses`, { credentials: "include" }),
+        fetch(`${apiUrl}/csrf-token`, { credentials: "include" }),
+      ]);
+      const cart = (await cartRes.json()) as { cartId: string };
+      const addresses = (await addressesRes.json()) as Array<{ id: string }>;
+      const { csrfToken } = (await csrfRes.json()) as { csrfToken: string };
+      return { cartId: cart.cartId, billingAddressId: addresses[0].id, shippingAddressId: addresses[0].id, csrfToken };
+    }, API_URL);
 
-    await page.waitForURL(/\/compte\/commandes\//, { timeout: 15_000 });
+    const orderIds = await page.evaluate(
+      async ({ apiUrl, cartId, billingAddressId, shippingAddressId, csrfToken }) => {
+        const body = JSON.stringify({ cartId, billingAddressId, shippingAddressId });
+        const headers = { "Content-Type": "application/json", "X-CSRF-Token": csrfToken };
+        const [r1, r2] = await Promise.all([
+          fetch(`${apiUrl}/orders`, { method: "POST", credentials: "include", headers, body }),
+          fetch(`${apiUrl}/orders`, { method: "POST", credentials: "include", headers, body }),
+        ]);
+        const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
+        return [d1.id, d2.id];
+      },
+      { apiUrl: API_URL, cartId, billingAddressId, shippingAddressId, csrfToken },
+    );
+
+    // Idempotence : les deux reponses designent la MEME commande.
+    expect(orderIds[0]).toBe(orderIds[1]);
 
     const orderCount = await page.evaluate(async (apiUrl) => {
       const res = await fetch(`${apiUrl}/orders`, { credentials: "include" });
