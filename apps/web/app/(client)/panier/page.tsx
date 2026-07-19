@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { components } from "@smc/api-client";
-import { api } from "../../../lib/api/browser-client.js";
-import { useAuth } from "../../../lib/auth/auth-context.js";
-import { ApiErrorAlert } from "../../../components/api-error-alert.js";
+import { api } from "../../../lib/api/browser-client";
+import { useAuth } from "../../../lib/auth/auth-context";
+import { ApiErrorAlert } from "../../../components/api-error-alert";
 
 type Cart = components["schemas"]["CartResponseDto"];
 

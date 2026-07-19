@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { createServerApiClient } from "../../../../../lib/api/server-client.js";
-import { ConfiguratorForm } from "./configurator-form.js";
+import { createServerApiClient } from "../../../../../lib/api/server-client";
+import { ConfiguratorForm } from "./configurator-form";
 
 export default async function ConfiguratorPage({
   params,

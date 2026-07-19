@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import "./globals.css";
-import { AuthProvider } from "../lib/auth/auth-context.js";
-import { SiteHeader } from "../components/site-header.js";
+import { AuthProvider } from "../lib/auth/auth-context";
+import { SiteHeader } from "../components/site-header";
 
 export const metadata = {
   title: "SaveMyControllers",

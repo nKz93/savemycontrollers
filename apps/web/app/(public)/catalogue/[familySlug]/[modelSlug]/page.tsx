@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createServerApiClient } from "../../../../../lib/api/server-client.js";
+import { createServerApiClient } from "../../../../../lib/api/server-client";
 
 export default async function DeviceModelDetailPage({
   params,

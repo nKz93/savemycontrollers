@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useAuth } from "../lib/auth/auth-context.js";
+import { useAuth } from "../lib/auth/auth-context";
 
 export function SiteHeader() {
   const { user, loading, logout } = useAuth();

@@ -3,9 +3,9 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { api, resetCsrfToken } from "../../../lib/api/browser-client.js";
-import { useAuth } from "../../../lib/auth/auth-context.js";
-import { ApiErrorAlert } from "../../../components/api-error-alert.js";
+import { api, resetCsrfToken } from "../../../lib/api/browser-client";
+import { useAuth } from "../../../lib/auth/auth-context";
+import { ApiErrorAlert } from "../../../components/api-error-alert";
 
 export default function LoginPage() {
   const router = useRouter();

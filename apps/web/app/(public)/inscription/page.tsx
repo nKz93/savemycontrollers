@@ -2,8 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { api } from "../../../lib/api/browser-client.js";
-import { ApiErrorAlert } from "../../../components/api-error-alert.js";
+import { api } from "../../../lib/api/browser-client";
+import { ApiErrorAlert } from "../../../components/api-error-alert";
 
 export default function RegisterPage() {
   const [firstName, setFirstName] = useState("");

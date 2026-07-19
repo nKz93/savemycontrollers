@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { AuthenticatedUserDto } from "@smc/api-client";
-import { api, resetCsrfToken } from "../api/browser-client.js";
+import { api, resetCsrfToken } from "../api/browser-client";
 
 interface AuthContextValue {
   user: AuthenticatedUserDto | null;

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createServerApiClient } from "../../../lib/api/server-client.js";
+import { createServerApiClient } from "../../../lib/api/server-client";
 
 export const metadata = { title: "Catalogue — SaveMyControllers" };
 

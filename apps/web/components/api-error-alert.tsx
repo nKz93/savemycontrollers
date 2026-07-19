@@ -1,4 +1,4 @@
-import { getApiErrorMessage } from "../lib/api/error.js";
+import { getApiErrorMessage } from "../lib/api/error";
 
 /** Affichage uniforme d'une erreur API structuree (voir lib/api/error.ts). */
 export function ApiErrorAlert({ error }: { error: unknown }) {

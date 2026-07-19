@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createServerApiClient } from "../../../../lib/api/server-client.js";
+import { createServerApiClient } from "../../../../lib/api/server-client";
 
 const STATUS_LABELS: Record<string, string> = {
   AWAITING_PAYMENT: "En attente de paiement",
