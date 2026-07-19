@@ -187,7 +187,7 @@ test.describe("Parcours client transactionnel — validation fonctionnelle reell
     await pageA.goto("/compte/adresses");
     await pageA.getByRole("button", { name: "Ajouter une adresse" }).click();
     await pageA.getByLabel("Destinataire").fill("Client A");
-    await pageA.getByLabel("Adresse").fill("1 rue de Test");
+    await pageA.getByLabel("Adresse", { exact: true }).fill("1 rue de Test");
     await pageA.getByLabel("Code postal").fill("75000");
     await pageA.getByLabel("Ville").fill("Paris");
     await pageA.getByRole("button", { name: "Enregistrer" }).click();
@@ -239,7 +239,7 @@ test.describe("Parcours client transactionnel — validation fonctionnelle reell
     await page.goto("/compte/adresses");
     await page.getByRole("button", { name: "Ajouter une adresse" }).click();
     await page.getByLabel("Destinataire").fill("Client Checkout");
-    await page.getByLabel("Adresse").fill("1 rue de Test");
+    await page.getByLabel("Adresse", { exact: true }).fill("1 rue de Test");
     await page.getByLabel("Code postal").fill("75000");
     await page.getByLabel("Ville").fill("Paris");
     await page.getByRole("button", { name: "Enregistrer" }).click();

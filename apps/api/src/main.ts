@@ -40,8 +40,22 @@ async function bootstrap(): Promise<void> {
   // au chargement pour obtenir son jeton avant tout POST/PUT/PATCH/DELETE.
   expressApp.get("/csrf-token", cookieParser(), (req: unknown, res: { setHeader: (k: string, v: string) => void; json: (body: unknown) => void }) => {
     res.setHeader("Cache-Control", "no-store");
+    // BUG REEL CORRIGE : generateToken(req, res) sans troisieme argument
+    // REUTILISE le cookie CSRF existant s'il y en a deja un
+    // (overwrite=false par defaut dans csrf-csrf), meme si l'identifiant
+    // de session a change entre-temps (ex. connexion : l'identifiant
+    // passe de "anonymous" au JWT de l'utilisateur — voir
+    // getSessionIdentifier dans csrf.ts). Le cookie restait alors lie a
+    // l'ancienne session tandis que le jeton retourne dans la reponse
+    // etait calcule pour la nouvelle, causant un 403 CSRF_TOKEN_INVALID
+    // des la premiere requete mutante suivant une connexion — trouve par
+    // la CI E2E reelle (le seul type de test qui rejoue un vrai
+    // enchainement connexion -> action mutante avec un vrai navigateur et
+    // de vrais cookies). overwrite=true force la regeneration du cookie
+    // a chaque appel, garantissant qu'il correspond toujours a la
+    // session courante.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    res.json({ csrfToken: generateToken(req as any, res as any) });
+    res.json({ csrfToken: generateToken(req as any, res as any, true) });
   });
   app.use(doubleCsrfProtection);
   // BUG REEL CORRIGE : doubleCsrfProtection est un middleware Express brut,
