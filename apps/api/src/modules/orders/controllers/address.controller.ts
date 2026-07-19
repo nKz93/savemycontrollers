@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, UsePipes } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
 import {
   createAddressSchema,
@@ -40,8 +40,7 @@ export class AddressController {
   @Post()
   @ApiBody({ type: CreateAddressBodyDto })
   @ApiResponse({ status: 201, type: AddressResponseDto })
-  @UsePipes(new ZodValidationPipe(createAddressSchema))
-  create(@Body() body: CreateAddressRequest, @CurrentUser() user: RequestWithUser["currentUser"]) {
+  create(@Body(new ZodValidationPipe(createAddressSchema)) body: CreateAddressRequest, @CurrentUser() user: RequestWithUser["currentUser"]) {
     return this.addresses.create(user!.id, body);
   }
 
@@ -49,10 +48,9 @@ export class AddressController {
   @ApiBody({ type: UpdateAddressBodyDto })
   @ApiResponse({ status: 200, type: AddressResponseDto })
   @ApiResponse({ status: 404, description: "Adresse introuvable ou n'appartenant pas a l'utilisateur courant." })
-  @UsePipes(new ZodValidationPipe(updateAddressSchema))
   update(
     @Param("id") id: string,
-    @Body() body: UpdateAddressRequest,
+    @Body(new ZodValidationPipe(updateAddressSchema)) body: UpdateAddressRequest,
     @CurrentUser() user: RequestWithUser["currentUser"],
   ) {
     return this.addresses.update(user!.id, id, body);

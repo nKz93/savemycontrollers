@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards, UsePipes } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { createOrderSchema, type CreateOrderRequest } from "@smc/contracts";
 import { ZodValidationPipe } from "../../core/http/zod-validation.pipe.js";
@@ -18,8 +18,7 @@ export class OrderController {
   @ApiResponse({ status: 201, type: OrderDetailResponseDto })
   @ApiResponse({ status: 400, description: "Panier vide, deja converti, expire, ou ligne invalide." })
   @ApiResponse({ status: 403, description: "Panier ou adresse n'appartenant pas a l'utilisateur courant." })
-  @UsePipes(new ZodValidationPipe(createOrderSchema))
-  create(@Body() body: CreateOrderRequest, @CurrentUser() user: RequestWithUser["currentUser"]) {
+  create(@Body(new ZodValidationPipe(createOrderSchema)) body: CreateOrderRequest, @CurrentUser() user: RequestWithUser["currentUser"]) {
     return this.orders.createOrder(body, user!.id);
   }
 

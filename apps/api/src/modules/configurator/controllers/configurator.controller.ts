@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UsePipes } from "@nestjs/common";
+import { Body, Controller, Post } from "@nestjs/common";
 import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { validateConfigurationSchema, type ValidateConfigurationRequest, type ConfigurationResultDto } from "@smc/contracts";
 import { ZodValidationPipe } from "../../core/http/zod-validation.pipe.js";
@@ -13,8 +13,7 @@ export class ConfiguratorController {
   @Post("validate")
   @ApiBody({ type: ValidateConfigurationBodyDto })
   @ApiResponse({ status: 201, type: ConfigurationResultResponseDto })
-  @UsePipes(new ZodValidationPipe(validateConfigurationSchema))
-  validate(@Body() body: ValidateConfigurationRequest): Promise<ConfigurationResultDto> {
+  validate(@Body(new ZodValidationPipe(validateConfigurationSchema)) body: ValidateConfigurationRequest): Promise<ConfigurationResultDto> {
     return this.configurator.validate(body);
   }
 }

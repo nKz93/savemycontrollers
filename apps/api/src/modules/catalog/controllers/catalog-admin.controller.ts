@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, UsePipes } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { createBrandSchema, updateBrandSchema, type CreateBrandRequest, type UpdateBrandRequest } from "@smc/contracts";
 import { JwtAuthGuard } from "../../identity/guards/jwt-auth.guard.js";
@@ -29,15 +29,13 @@ export class CatalogAdminController {
 
   @Post()
   @RequirePermission(PERMISSIONS.CATALOG_CREATE)
-  @UsePipes(new ZodValidationPipe(createBrandSchema))
-  create(@Body() body: CreateBrandRequest) {
+  create(@Body(new ZodValidationPipe(createBrandSchema)) body: CreateBrandRequest) {
     return this.catalog.createBrand(body);
   }
 
   @Patch(":id")
   @RequirePermission(PERMISSIONS.CATALOG_UPDATE)
-  @UsePipes(new ZodValidationPipe(updateBrandSchema))
-  update(@Param("id") id: string, @Body() body: UpdateBrandRequest) {
+  update(@Param("id") id: string, @Body(new ZodValidationPipe(updateBrandSchema)) body: UpdateBrandRequest) {
     return this.catalog.updateBrand(id, body);
   }
 
