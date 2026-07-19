@@ -23,7 +23,7 @@ export class AuthenticatedUserResponseDto implements AuthenticatedUserDto {
   @ApiProperty() email!: string;
   @ApiProperty() firstName!: string;
   @ApiProperty() lastName!: string;
-  @ApiPropertyOptional({ nullable: true }) emailVerifiedAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) emailVerifiedAt!: string | null;
   @ApiProperty({ enum: ["INDIVIDUAL", "COMPANY_MEMBER", "STAFF"] }) accountType!: AuthenticatedUserDto["accountType"];
 }
 
@@ -31,8 +31,8 @@ export class SessionResponseDto implements SessionDto {
   @ApiProperty() id!: string;
   @ApiProperty() createdAt!: string;
   @ApiProperty() lastUsedAt!: string;
-  @ApiPropertyOptional({ nullable: true }) userAgent!: string | null;
-  @ApiPropertyOptional({ nullable: true }) ipAddress!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) userAgent!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) ipAddress!: string | null;
   @ApiProperty() current!: boolean;
 }
 

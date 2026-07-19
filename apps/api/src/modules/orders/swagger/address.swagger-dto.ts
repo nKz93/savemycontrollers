@@ -16,14 +16,14 @@ import type { AddressDto, CreateAddressRequest, UpdateAddressRequest } from "@sm
  */
 export class AddressResponseDto implements AddressDto {
   @ApiProperty() id!: string;
-  @ApiPropertyOptional({ nullable: true }) label!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) label!: string | null;
   @ApiProperty() recipientName!: string;
   @ApiProperty() line1!: string;
-  @ApiPropertyOptional({ nullable: true }) line2!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) line2!: string | null;
   @ApiProperty() postalCode!: string;
   @ApiProperty() city!: string;
   @ApiProperty({ example: "FR" }) country!: string;
-  @ApiPropertyOptional({ nullable: true }) phone!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) phone!: string | null;
   @ApiProperty() isDefaultBilling!: boolean;
   @ApiProperty() isDefaultShipping!: boolean;
 }

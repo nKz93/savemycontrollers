@@ -2124,10 +2124,27 @@
             "type": "string"
           },
           "financialStatus": {
-            "type": "object"
+            "type": "string",
+            "enum": [
+              "AWAITING_PAYMENT",
+              "PAID",
+              "PARTIALLY_REFUNDED",
+              "REFUNDED",
+              "CANCELLED"
+            ]
           },
           "operationalStatus": {
-            "type": "object"
+            "type": "string",
+            "enum": [
+              "CREATED",
+              "AWAITING_SHIPMENT_FROM_CLIENT",
+              "IN_PROGRESS",
+              "PARTIALLY_SHIPPED",
+              "SHIPPED",
+              "DELIVERED",
+              "CLOSED",
+              "CANCELLED"
+            ]
           },
           "billingAddress": {
             "$ref": "#/components/schemas/OrderAddressSnapshotResponseDto"

@@ -21,7 +21,7 @@ export class CartItemResponseDto implements CartItemDto {
   @ApiProperty() taxAmountMinor!: number;
   @ApiProperty() totalMinor!: number;
   @ApiProperty({ example: "EUR" }) currency!: "EUR";
-  @ApiPropertyOptional({ nullable: true }) reportedIssue!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) reportedIssue!: string | null;
 }
 
 export class CartResponseDto implements CartDto {
@@ -80,13 +80,13 @@ export class OrderSummaryResponseDto implements OrderSummaryDto {
 
 export class OrderAddressSnapshotResponseDto implements OrderAddressSnapshotDto {
   @ApiProperty() recipientName!: string;
-  @ApiPropertyOptional({ nullable: true }) companyName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) companyName!: string | null;
   @ApiProperty() line1!: string;
-  @ApiPropertyOptional({ nullable: true }) line2!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) line2!: string | null;
   @ApiProperty() postalCode!: string;
   @ApiProperty() city!: string;
   @ApiProperty() country!: string;
-  @ApiPropertyOptional({ nullable: true }) phone!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) phone!: string | null;
 }
 
 class OrderLineComponentResponseDto {
@@ -98,22 +98,35 @@ export class OrderItemDetailResponseDto implements OrderItemDetailDto {
   @ApiProperty() id!: string;
   @ApiProperty() deviceModelName!: string;
   @ApiProperty() deviceVariantName!: string;
-  @ApiPropertyOptional({ nullable: true }) hardwareRevisionLabel!: string | null;
-  @ApiPropertyOptional({ nullable: true }) reportedIssue!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) hardwareRevisionLabel!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) reportedIssue!: string | null;
   @ApiProperty() unitPriceMinor!: number;
   @ApiProperty() discountMinor!: number;
   @ApiProperty() taxAmountMinor!: number;
   @ApiProperty() totalMinor!: number;
   @ApiProperty({ type: [OrderLineComponentResponseDto] }) services!: OrderLineComponentResponseDto[];
   @ApiProperty({ type: [OrderLineComponentResponseDto] }) options!: OrderLineComponentResponseDto[];
-  @ApiPropertyOptional({ nullable: true }) repairCaseId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) repairCaseId!: string | null;
 }
 
 export class OrderDetailResponseDto implements OrderDetailDto {
   @ApiProperty() id!: string;
   @ApiProperty() reference!: string;
-  @ApiProperty() financialStatus!: OrderDetailDto["financialStatus"];
-  @ApiProperty() operationalStatus!: OrderDetailDto["operationalStatus"];
+  @ApiProperty({ enum: ["AWAITING_PAYMENT", "PAID", "PARTIALLY_REFUNDED", "REFUNDED", "CANCELLED"] })
+  financialStatus!: OrderDetailDto["financialStatus"];
+  @ApiProperty({
+    enum: [
+      "CREATED",
+      "AWAITING_SHIPMENT_FROM_CLIENT",
+      "IN_PROGRESS",
+      "PARTIALLY_SHIPPED",
+      "SHIPPED",
+      "DELIVERED",
+      "CLOSED",
+      "CANCELLED",
+    ],
+  })
+  operationalStatus!: OrderDetailDto["operationalStatus"];
   @ApiProperty({ type: OrderAddressSnapshotResponseDto }) billingAddress!: OrderAddressSnapshotResponseDto;
   @ApiProperty({ type: OrderAddressSnapshotResponseDto }) shippingAddress!: OrderAddressSnapshotResponseDto;
   @ApiProperty() subtotalMinor!: number;
@@ -134,5 +147,5 @@ export class CreateOrderBodyDto implements CreateOrderRequest {
 
 export class MergeCartResponseDto {
   @ApiProperty() merged!: boolean;
-  @ApiPropertyOptional({ nullable: true }) cartId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) cartId!: string | null;
 }

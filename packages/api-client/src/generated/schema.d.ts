@@ -886,8 +886,10 @@ export interface components {
         OrderDetailResponseDto: {
             id: string;
             reference: string;
-            financialStatus: Record<string, never>;
-            operationalStatus: Record<string, never>;
+            /** @enum {string} */
+            financialStatus: "AWAITING_PAYMENT" | "PAID" | "PARTIALLY_REFUNDED" | "REFUNDED" | "CANCELLED";
+            /** @enum {string} */
+            operationalStatus: "CREATED" | "AWAITING_SHIPMENT_FROM_CLIENT" | "IN_PROGRESS" | "PARTIALLY_SHIPPED" | "SHIPPED" | "DELIVERED" | "CLOSED" | "CANCELLED";
             billingAddress: components["schemas"]["OrderAddressSnapshotResponseDto"];
             shippingAddress: components["schemas"]["OrderAddressSnapshotResponseDto"];
             subtotalMinor: number;
