@@ -43,6 +43,14 @@ export class CartController {
     return { cartId: handle.cartId };
   }
 
+  /** Retrouve ou cree le panier actif de l'utilisateur authentifie. userId provient exclusivement du JWT. */
+  @Get("mine")
+  @UseGuards(JwtAuthGuard)
+  @ApiResponse({ status: 200, type: EnsureGuestCartResponseDto })
+  async ensureUserCart(@CurrentUser() user: RequestWithUser["currentUser"]) {
+    return this.cart.resolveOrCreateUserCart(user!.id);
+  }
+
   @Post(":cartId/items")
   @ApiBody({ type: AddCartItemBodyDto })
   @ApiResponse({ status: 201, type: CartResponseDto })

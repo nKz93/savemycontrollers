@@ -37,6 +37,18 @@ export class CartService {
     private readonly tokens: TokenService,
   ) {}
 
+  /**
+   * Equivalent authentifie de resolveOrCreateGuestCart : retrouve le
+   * panier actif de l'utilisateur courant (userId provenant exclusivement
+   * du JWT) ou en cree un nouveau. Ne prend jamais de cartId en entree.
+   */
+  async resolveOrCreateUserCart(userId: string): Promise<{ cartId: string }> {
+    const existing = await this.carts.findActiveForUser(userId);
+    if (existing) return { cartId: existing.id };
+    const created = await this.carts.createForUser(userId);
+    return { cartId: created.id };
+  }
+
   async resolveOrCreateGuestCart(existingGuestTokenRaw?: string): Promise<GuestCartHandle> {
     if (existingGuestTokenRaw) {
       const hash = this.tokens.hashOpaqueToken(existingGuestTokenRaw);

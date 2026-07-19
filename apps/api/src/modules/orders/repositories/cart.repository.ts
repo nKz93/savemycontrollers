@@ -11,6 +11,10 @@ export class CartRepository {
     return this.prisma.cart.create({ data: { userId, companyId } });
   }
 
+  findActiveForUser(userId: string) {
+    return this.prisma.cart.findFirst({ where: { userId, convertedAt: null } });
+  }
+
   createGuest(guestTokenHash: string) {
     return this.prisma.cart.create({
       data: { guestTokenHash, expiresAt: new Date(Date.now() + GUEST_CART_TTL_MS) },

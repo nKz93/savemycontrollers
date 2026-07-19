@@ -461,6 +461,27 @@
         ]
       }
     },
+    "/cart/mine": {
+      "get": {
+        "operationId": "CartController_ensureUserCart",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsureGuestCartResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "cart"
+        ]
+      }
+    },
     "/cart/{cartId}/items": {
       "post": {
         "operationId": "CartController_addItemGuest",

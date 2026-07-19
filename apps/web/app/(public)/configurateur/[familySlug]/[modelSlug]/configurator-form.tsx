@@ -113,8 +113,8 @@ export function ConfiguratorForm({
     setAddingToCart(true);
     setAddToCartError(null);
     try {
-      const { data: guestCart } = await api.POST("/cart/guest");
-      const cartId = guestCart?.cartId;
+      const { data: resolved } = user ? await api.GET("/cart/mine") : await api.POST("/cart/guest");
+      const cartId = resolved?.cartId;
       if (!cartId) throw new Error("Panier introuvable.");
 
       const itemBody = {
