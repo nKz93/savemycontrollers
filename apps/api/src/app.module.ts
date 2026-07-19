@@ -20,7 +20,7 @@ import { HealthModule } from "./modules/health/health.module.js";
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: Number(process.env.THROTTLE_LIMIT_PER_MINUTE) || 120 }]),
     CoreModule,
     AuditModule,
     OutboxModule,

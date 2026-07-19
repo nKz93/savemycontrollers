@@ -14,6 +14,13 @@ const baseSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "preprod", "production"]).default("development"),
 
   API_PORT: z.coerce.number().int().min(1).max(65535).default(3001),
+  // Limite globale du ThrottlerGuard (requetes/60s, par IP), en
+  // complement du RedisRateLimitGuard cible par route. Configurable pour
+  // permettre un seuil plus genereux dans l'environnement de validation
+  // E2E (une suite de tests automatisee genere legitimement bien plus de
+  // requetes par seconde qu'un utilisateur reel depuis une seule IP) sans
+  // jamais affaiblir la valeur par defaut en production.
+  THROTTLE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).default(120),
   API_URL: z.string().url(),
   COOKIE_DOMAIN: z.string().optional(),
   CORS_ALLOWED_ORIGINS: z.string().min(1),

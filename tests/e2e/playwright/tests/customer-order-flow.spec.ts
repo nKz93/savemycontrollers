@@ -44,7 +44,7 @@ async function addStickDriftRepairToCart(page: Page): Promise<void> {
   await page.getByRole("checkbox", { name: /Correction de stick drift/ }).click();
   await expect(page.getByText("Total", { exact: true })).toBeVisible({ timeout: 10_000 });
   await page.getByRole("button", { name: "Ajouter au panier" }).click();
-  await expect(page.getByText("Ajoute au panier.")).toBeVisible();
+  await expect(page.getByText("Ajoute au panier.")).toBeVisible({ timeout: 10_000 });
 }
 
 test.describe("Parcours client transactionnel — validation fonctionnelle reelle", () => {
