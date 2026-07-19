@@ -344,6 +344,27 @@
         ]
       }
     },
+    "/cart/merge": {
+      "post": {
+        "operationId": "CartController_mergeGuestCart",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MergeCartResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "cart"
+        ]
+      }
+    },
     "/cart/{cartId}": {
       "get": {
         "operationId": "CartController_getCartGuest",
@@ -394,9 +415,32 @@
       "post": {
         "operationId": "OrderController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetailResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Panier vide, deja converti, expire, ou ligne invalide."
+          },
+          "403": {
+            "description": "Panier ou adresse n'appartenant pas a l'utilisateur courant."
           }
         },
         "tags": [
@@ -408,7 +452,17 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderSummaryResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -431,11 +485,172 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetailResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Commande introuvable ou n'appartenant pas a l'utilisateur courant."
           }
         },
         "tags": [
           "orders"
+        ]
+      }
+    },
+    "/addresses": {
+      "get": {
+        "operationId": "AddressController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AddressResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "addresses"
+        ]
+      },
+      "post": {
+        "operationId": "AddressController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAddressBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "addresses"
+        ]
+      }
+    },
+    "/addresses/{id}": {
+      "get": {
+        "operationId": "AddressController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Adresse introuvable ou n'appartenant pas a l'utilisateur courant."
+          }
+        },
+        "tags": [
+          "addresses"
+        ]
+      },
+      "patch": {
+        "operationId": "AddressController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAddressBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Adresse introuvable ou n'appartenant pas a l'utilisateur courant."
+          }
+        },
+        "tags": [
+          "addresses"
+        ]
+      },
+      "delete": {
+        "operationId": "AddressController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Adresse supprimee."
+          },
+          "404": {
+            "description": "Adresse introuvable ou n'appartenant pas a l'utilisateur courant."
+          }
+        },
+        "tags": [
+          "addresses"
         ]
       }
     },
@@ -736,6 +951,416 @@
         "name": "smc_access_token"
       }
     },
-    "schemas": {}
+    "schemas": {
+      "MergeCartResponseDto": {
+        "type": "object",
+        "properties": {
+          "merged": {
+            "type": "boolean"
+          },
+          "cartId": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "merged"
+        ]
+      },
+      "CreateOrderBodyDto": {
+        "type": "object",
+        "properties": {
+          "cartId": {
+            "type": "string"
+          },
+          "billingAddressId": {
+            "type": "string"
+          },
+          "shippingAddressId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cartId",
+          "billingAddressId",
+          "shippingAddressId"
+        ]
+      },
+      "OrderAddressSnapshotResponseDto": {
+        "type": "object",
+        "properties": {
+          "recipientName": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "object",
+            "nullable": true
+          },
+          "line1": {
+            "type": "string"
+          },
+          "line2": {
+            "type": "object",
+            "nullable": true
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "recipientName",
+          "line1",
+          "postalCode",
+          "city",
+          "country"
+        ]
+      },
+      "OrderLineComponentResponseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "priceMinor": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "priceMinor"
+        ]
+      },
+      "OrderItemDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "deviceModelName": {
+            "type": "string"
+          },
+          "deviceVariantName": {
+            "type": "string"
+          },
+          "hardwareRevisionLabel": {
+            "type": "object",
+            "nullable": true
+          },
+          "reportedIssue": {
+            "type": "object",
+            "nullable": true
+          },
+          "unitPriceMinor": {
+            "type": "number"
+          },
+          "discountMinor": {
+            "type": "number"
+          },
+          "taxAmountMinor": {
+            "type": "number"
+          },
+          "totalMinor": {
+            "type": "number"
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderLineComponentResponseDto"
+            }
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderLineComponentResponseDto"
+            }
+          },
+          "repairCaseId": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "deviceModelName",
+          "deviceVariantName",
+          "unitPriceMinor",
+          "discountMinor",
+          "taxAmountMinor",
+          "totalMinor",
+          "services",
+          "options"
+        ]
+      },
+      "OrderDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "financialStatus": {
+            "type": "object"
+          },
+          "operationalStatus": {
+            "type": "object"
+          },
+          "billingAddress": {
+            "$ref": "#/components/schemas/OrderAddressSnapshotResponseDto"
+          },
+          "shippingAddress": {
+            "$ref": "#/components/schemas/OrderAddressSnapshotResponseDto"
+          },
+          "subtotalMinor": {
+            "type": "number"
+          },
+          "discountMinor": {
+            "type": "number"
+          },
+          "taxMinor": {
+            "type": "number"
+          },
+          "shippingFeeMinor": {
+            "type": "number"
+          },
+          "totalMinor": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string",
+            "example": "EUR"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemDetailResponseDto"
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reference",
+          "financialStatus",
+          "operationalStatus",
+          "billingAddress",
+          "shippingAddress",
+          "subtotalMinor",
+          "discountMinor",
+          "taxMinor",
+          "shippingFeeMinor",
+          "totalMinor",
+          "currency",
+          "items",
+          "createdAt"
+        ]
+      },
+      "OrderSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "financialStatus": {
+            "type": "string",
+            "enum": [
+              "AWAITING_PAYMENT",
+              "PAID",
+              "PARTIALLY_REFUNDED",
+              "REFUNDED",
+              "CANCELLED"
+            ]
+          },
+          "operationalStatus": {
+            "type": "string",
+            "enum": [
+              "CREATED",
+              "AWAITING_SHIPMENT_FROM_CLIENT",
+              "IN_PROGRESS",
+              "PARTIALLY_SHIPPED",
+              "SHIPPED",
+              "DELIVERED",
+              "CLOSED",
+              "CANCELLED"
+            ]
+          },
+          "totalMinor": {
+            "type": "number",
+            "description": "Montant total en centimes (unite mineure)."
+          },
+          "currency": {
+            "type": "string",
+            "example": "EUR"
+          },
+          "itemCount": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reference",
+          "financialStatus",
+          "operationalStatus",
+          "totalMinor",
+          "currency",
+          "itemCount",
+          "createdAt"
+        ]
+      },
+      "AddressResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "object",
+            "nullable": true
+          },
+          "recipientName": {
+            "type": "string"
+          },
+          "line1": {
+            "type": "string"
+          },
+          "line2": {
+            "type": "object",
+            "nullable": true
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string",
+            "example": "FR"
+          },
+          "phone": {
+            "type": "object",
+            "nullable": true
+          },
+          "isDefaultBilling": {
+            "type": "boolean"
+          },
+          "isDefaultShipping": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "recipientName",
+          "line1",
+          "postalCode",
+          "city",
+          "country",
+          "isDefaultBilling",
+          "isDefaultShipping"
+        ]
+      },
+      "CreateAddressBodyDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "recipientName": {
+            "type": "string"
+          },
+          "line1": {
+            "type": "string"
+          },
+          "line2": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string",
+            "example": "FR"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "isDefaultBilling": {
+            "type": "boolean",
+            "default": false
+          },
+          "isDefaultShipping": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "recipientName",
+          "line1",
+          "postalCode",
+          "city",
+          "country",
+          "isDefaultBilling",
+          "isDefaultShipping"
+        ]
+      },
+      "UpdateAddressBodyDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "recipientName": {
+            "type": "string"
+          },
+          "line1": {
+            "type": "string"
+          },
+          "line2": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string",
+            "example": "FR"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "isDefaultBilling": {
+            "type": "boolean"
+          },
+          "isDefaultShipping": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
   }
 }

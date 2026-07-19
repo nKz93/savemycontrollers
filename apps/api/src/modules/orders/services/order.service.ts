@@ -11,7 +11,7 @@ import { RepairsPublicApi } from "../../repairs/repairs.public-api.js";
 import { OutboxRepository } from "../../outbox/repositories/outbox.repository.js";
 import { BUSINESS_EVENT_TYPES } from "../../core/events/business-event.js";
 import { ForbiddenDomainError, NotFoundDomainError, ValidationDomainError } from "../../core/errors/domain-error.js";
-import type { CreateOrderRequest } from "@smc/contracts";
+import type { CreateOrderRequest, OrderDetailDto, OrderSummaryDto, OrderAddressSnapshotDto, OrderItemDetailDto } from "@smc/contracts";
 
 /**
  * Creation de commande : construit un instantane immuable de chaque ligne
@@ -36,20 +36,32 @@ export class OrderService {
     private readonly outbox: OutboxRepository,
   ) {}
 
-  async createOrder(input: CreateOrderRequest, userId: string) {
+  async createOrder(input: CreateOrderRequest, userId: string): Promise<OrderDetailDto> {
     const cart = await this.carts.findById(input.cartId);
     if (!cart) throw new NotFoundDomainError("Panier introuvable.");
-    if (cart.items.length === 0) throw new ValidationDomainError("Le panier est vide.");
-    if (cart.convertedToOrderId) throw new ValidationDomainError("Ce panier a deja ete transforme en commande.");
-    if (cart.expiresAt && cart.expiresAt < new Date()) throw new ValidationDomainError("Ce panier a expire.");
 
     // Un panier invite ne peut pas etre transforme directement en commande
     // authentifiee sans rattachement explicite prealable (hors perimetre de
     // cette phase) : on exige ici que le panier appartienne deja a
-    // l'utilisateur courant.
+    // l'utilisateur courant. Verifie AVANT le chemin rapide idempotent
+    // ci-dessous, pour qu'un panier d'un autre utilisateur ne puisse
+    // jamais reveler l'existence d'une commande via ce raccourci.
     if (cart.userId !== userId) {
       throw new ForbiddenDomainError("Ce panier ne vous appartient pas.");
     }
+
+    // Idempotence (voir section sur la double soumission) : une requete
+    // REPETEE (pas seulement concurrente) sur un panier deja converti
+    // renvoie la commande deja creee, jamais une erreur. C'est un chemin
+    // rapide (optimisation, simple lecture) ; la garantie d'unicite sous
+    // concurrence reelle repose sur la reclamation atomique transactionnelle
+    // plus bas, pas sur cette verification.
+    if (cart.convertedToOrderId) {
+      return this.getOrderForUser(cart.convertedToOrderId, userId);
+    }
+
+    if (cart.items.length === 0) throw new ValidationDomainError("Le panier est vide.");
+    if (cart.expiresAt && cart.expiresAt < new Date()) throw new ValidationDomainError("Ce panier a expire.");
 
     let companyId: string | undefined;
     if (cart.companyId) {
@@ -100,7 +112,35 @@ export class OrderService {
     const correlationId = randomUUID();
     const reference = await this.references.generateOrderReference();
 
-    const order = await this.orders.runInTransaction(async (tx) => {
+    const orderId = await this.orders.runInTransaction(async (tx) => {
+      // Reclamation atomique du panier : premiere ecriture de la
+      // transaction, conditionnee sur `convertedAt IS NULL`. C'est cette
+      // mise a jour conditionnelle (et non la verification anticipee
+      // faite plus haut, qui n'est qu'une optimisation de chemin rapide)
+      // qui garantit qu'une double soumission concurrente ne peut jamais
+      // creer deux commandes : sous PostgreSQL, l'UPDATE de la
+      // transaction perdante se BLOQUE tant que la transaction gagnante
+      // n'a pas commite (verrou de ligne sur `cart`), puis se re-evalue
+      // contre l'etat desormais commite — la commande gagnante est donc
+      // garantie deja visible ici, jamais une lecture partielle.
+      const claimed = await tx.cart.updateMany({
+        where: { id: cart.id, convertedAt: null },
+        data: { convertedAt: new Date() },
+      });
+
+      if (claimed.count === 0) {
+        // Idempotence : renvoie l'identifiant de la commande gagnante,
+        // jamais une erreur — que ce soit une vraie course concurrente ou
+        // une repetition tardive de la meme requete.
+        const existingCart = await tx.cart.findUniqueOrThrow({ where: { id: cart.id } });
+        if (!existingCart.convertedToOrderId) {
+          // Defense en profondeur : ne devrait jamais arriver (convertedAt
+          // et convertedToOrderId sont toujours poses ensemble ci-dessous).
+          throw new ValidationDomainError("Ce panier a deja ete transforme en commande, mais elle est introuvable.");
+        }
+        return existingCart.convertedToOrderId;
+      }
+
       const createdOrder = await tx.order.create({
         data: {
           reference,
@@ -192,12 +232,16 @@ export class OrderService {
       });
       await this.repairs.createCasesForOrderInTransaction(tx, repairCaseInputs, correlationId);
 
-      await tx.cart.update({ where: { id: cart.id }, data: { convertedToOrderId: createdOrder.id, convertedAt: new Date() } });
+      await tx.cart.update({ where: { id: cart.id }, data: { convertedToOrderId: createdOrder.id } });
 
-      return createdOrder;
+      return createdOrder.id;
     });
 
-    return order;
+    // Que la commande vienne d'etre creee ou qu'elle existait deja
+    // (chemin idempotent ci-dessus), on relit systematiquement via le
+    // meme mappeur DTO anti-fuite que la consultation normale — jamais un
+    // objet Prisma partiel renvoye directement.
+    return this.getOrderForUser(orderId, userId);
   }
 
   private assertAddressOwnership(address: { userId: string | null; companyId: string | null }, userId: string, companyId?: string): void {
@@ -210,14 +254,156 @@ export class OrderService {
     }
   }
 
-  async getOrderForUser(orderId: string, userId: string) {
-    const order = await this.orders.findById(orderId);
+  async getOrderForUser(orderId: string, userId: string): Promise<OrderDetailDto> {
+    const order = await this.orders.findByIdForUser(orderId, userId);
+    // Meme erreur, que la commande n'existe pas ou appartienne a un autre
+    // compte : aucune fuite d'information sur l'existence d'une commande
+    // d'un autre client (voir section 5 du prompt).
     if (!order) throw new NotFoundDomainError("Commande introuvable.");
-    if (order.userId !== userId) throw new ForbiddenDomainError("Acces refuse a cette commande.");
-    return order;
+    return toOrderDetailDto(order);
   }
 
-  async listOwnOrders(userId: string) {
-    return this.orders.listForUser(userId);
+  async listOwnOrders(userId: string): Promise<OrderSummaryDto[]> {
+    const orders = await this.orders.listForUser(userId);
+    return orders.map(toOrderSummaryDto);
   }
+}
+
+// --- Mappers DTO anti-fuite -------------------------------------------
+// Liste blanche stricte de champs (voir section 5 du prompt) : aucune
+// entite Prisma n'est jamais renvoyee telle quelle a un controleur.
+
+interface OrderRowForSummary {
+  id: string;
+  reference: string;
+  financialStatus: string;
+  operationalStatus: string;
+  totalMinor: number;
+  currency: string;
+  createdAt: Date;
+  items: unknown[];
+}
+
+function toOrderSummaryDto(row: OrderRowForSummary): OrderSummaryDto {
+  return {
+    id: row.id,
+    reference: row.reference,
+    financialStatus: row.financialStatus as OrderSummaryDto["financialStatus"],
+    operationalStatus: row.operationalStatus as OrderSummaryDto["operationalStatus"],
+    totalMinor: row.totalMinor,
+    currency: "EUR",
+    itemCount: row.items.length,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+interface OrderRowForDetail extends OrderRowForSummary {
+  subtotalMinor: number;
+  discountMinor: number;
+  taxMinor: number;
+  shippingFeeMinor: number;
+  billingRecipientName: string;
+  billingCompanyName: string | null;
+  billingLine1: string;
+  billingLine2: string | null;
+  billingPostalCode: string;
+  billingCity: string;
+  billingCountry: string;
+  billingPhone: string | null;
+  shippingRecipientName: string;
+  shippingCompanyName: string | null;
+  shippingLine1: string;
+  shippingLine2: string | null;
+  shippingPostalCode: string;
+  shippingCity: string;
+  shippingCountry: string;
+  shippingPhone: string | null;
+  items: Array<{
+    id: string;
+    deviceModelNameSnapshot: string;
+    deviceVariantNameSnapshot: string;
+    hardwareRevisionLabelSnapshot: string | null;
+    reportedIssueSnapshot: string | null;
+    unitPriceMinorSnapshot: number;
+    discountMinorSnapshot: number;
+    taxAmountMinorSnapshot: number;
+    totalMinorSnapshot: number;
+    serviceSnapshots: Array<{ nameSnapshot: string; priceMinorSnapshot: number }>;
+    optionSnapshots: Array<{ nameSnapshot: string; priceMinorSnapshot: number }>;
+  }>;
+  repairCases: Array<{ id: string; orderItemId: string | null }>;
+}
+
+function toOrderAddressSnapshot(prefix: {
+  recipientName: string;
+  companyName: string | null;
+  line1: string;
+  line2: string | null;
+  postalCode: string;
+  city: string;
+  country: string;
+  phone: string | null;
+}): OrderAddressSnapshotDto {
+  return {
+    recipientName: prefix.recipientName,
+    companyName: prefix.companyName,
+    line1: prefix.line1,
+    line2: prefix.line2,
+    postalCode: prefix.postalCode,
+    city: prefix.city,
+    country: prefix.country,
+    phone: prefix.phone,
+  };
+}
+
+function toOrderDetailDto(row: OrderRowForDetail): OrderDetailDto {
+  const items: OrderItemDetailDto[] = row.items.map((item) => ({
+    id: item.id,
+    deviceModelName: item.deviceModelNameSnapshot,
+    deviceVariantName: item.deviceVariantNameSnapshot,
+    hardwareRevisionLabel: item.hardwareRevisionLabelSnapshot,
+    reportedIssue: item.reportedIssueSnapshot,
+    unitPriceMinor: item.unitPriceMinorSnapshot,
+    discountMinor: item.discountMinorSnapshot,
+    taxAmountMinor: item.taxAmountMinorSnapshot,
+    totalMinor: item.totalMinorSnapshot,
+    services: item.serviceSnapshots.map((s) => ({ name: s.nameSnapshot, priceMinor: s.priceMinorSnapshot })),
+    options: item.optionSnapshots.map((o) => ({ name: o.nameSnapshot, priceMinor: o.priceMinorSnapshot })),
+    repairCaseId: row.repairCases.find((rc) => rc.orderItemId === item.id)?.id ?? null,
+  }));
+
+  return {
+    id: row.id,
+    reference: row.reference,
+    financialStatus: row.financialStatus as OrderDetailDto["financialStatus"],
+    operationalStatus: row.operationalStatus as OrderDetailDto["operationalStatus"],
+    billingAddress: toOrderAddressSnapshot({
+      recipientName: row.billingRecipientName,
+      companyName: row.billingCompanyName,
+      line1: row.billingLine1,
+      line2: row.billingLine2,
+      postalCode: row.billingPostalCode,
+      city: row.billingCity,
+      country: row.billingCountry,
+      phone: row.billingPhone,
+    }),
+    shippingAddress: toOrderAddressSnapshot({
+      recipientName: row.shippingRecipientName,
+      companyName: row.shippingCompanyName,
+      line1: row.shippingLine1,
+      line2: row.shippingLine2,
+      postalCode: row.shippingPostalCode,
+      city: row.shippingCity,
+      country: row.shippingCountry,
+      phone: row.shippingPhone,
+    }),
+    subtotalMinor: row.subtotalMinor,
+    discountMinor: row.discountMinor,
+    taxMinor: row.taxMinor,
+    shippingFeeMinor: row.shippingFeeMinor,
+    totalMinor: row.totalMinor,
+    currency: "EUR",
+    items,
+    createdAt: row.createdAt.toISOString(),
+  };
 }

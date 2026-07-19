@@ -1,11 +1,12 @@
 import { Body, Controller, Get, Param, Post, Req, Res, UseGuards, UsePipes } from "@nestjs/common";
 import type { Request, Response } from "express";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { addCartItemSchema, type AddCartItemRequest } from "@smc/contracts";
 import { ZodValidationPipe } from "../../core/http/zod-validation.pipe.js";
 import { CartService } from "../services/cart.service.js";
 import { JwtAuthGuard, type RequestWithUser } from "../../identity/guards/jwt-auth.guard.js";
 import { CurrentUser } from "../../identity/decorators/current-user.decorator.js";
+import { MergeCartResponseDto } from "../swagger/order.swagger-dto.js";
 
 const GUEST_CART_COOKIE = "smc_guest_cart_token";
 
@@ -57,6 +58,31 @@ export class CartController {
     @CurrentUser() user: RequestWithUser["currentUser"],
   ) {
     return this.cart.addItem(cartId, body, { userId: user!.id });
+  }
+
+  /**
+   * Fusion du panier invite dans le compte a la connexion. userId
+   * provient exclusivement du JWT (JwtAuthGuard + @CurrentUser), le
+   * jeton invite exclusivement du cookie HttpOnly — aucun des deux
+   * n'est jamais accepte depuis le corps de la requete. Protegee par
+   * CSRF comme toute route POST authentifiee (voir main.ts).
+   */
+  @Post("merge")
+  @UseGuards(JwtAuthGuard)
+  @ApiResponse({ status: 201, type: MergeCartResponseDto })
+  async mergeGuestCart(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @CurrentUser() user: RequestWithUser["currentUser"],
+  ) {
+    const guestTokenRaw = req.cookies?.[GUEST_CART_COOKIE] as string | undefined;
+    const result = await this.cart.attachGuestCartToUser(user!.id, guestTokenRaw);
+    if (result.merged) {
+      // Le jeton invite est mort cote serveur des la fusion reussie : le
+      // cookie n'a plus aucune utilite et est retire immediatement.
+      res.clearCookie(GUEST_CART_COOKIE, this.guestCookieOptions());
+    }
+    return { merged: result.merged, cartId: result.cartId };
   }
 
   @Get(":cartId")
