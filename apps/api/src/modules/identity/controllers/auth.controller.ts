@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, Req, Res, UseGuards, UsePipes } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { RedisRateLimitGuard, RedisRateLimit } from "../../core/security/redis-rate-limit.guard.js";
 import type { Request, Response } from "express";
@@ -73,8 +73,7 @@ export class AuthController {
   @RedisRateLimit({ limit: 5, windowSeconds: 3600, byEmail: true })
   @ApiBody({ type: RegisterBodyDto })
   @ApiResponse({ status: 201, type: MessageResponseDto })
-  @UsePipes(new ZodValidationPipe(registerRequestSchema))
-  async register(@Body() body: RegisterRequest, @Req() req: Request) {
+  async register(@Body(new ZodValidationPipe(registerRequestSchema)) body: RegisterRequest, @Req() req: Request) {
     const correlationId = (req.headers["x-correlation-id"] as string) ?? randomUUID();
     await this.auth.register(body, {
       ipAddress: req.ip,
@@ -104,8 +103,7 @@ export class AuthController {
   @ApiResponse({ status: 200, type: AuthenticatedUserResponseDto })
   @ApiResponse({ status: 401, description: "Identifiants invalides." })
   @HttpCode(200)
-  @UsePipes(new ZodValidationPipe(loginRequestSchema))
-  async login(@Body() body: LoginRequest, @Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<AuthenticatedUserDto> {
+  async login(@Body(new ZodValidationPipe(loginRequestSchema)) body: LoginRequest, @Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<AuthenticatedUserDto> {
     const correlationId = (req.headers["x-correlation-id"] as string) ?? randomUUID();
     const { user, accessToken, rawRefreshToken } = await this.auth.login(body, {
       ipAddress: req.ip,
@@ -169,8 +167,7 @@ export class AuthController {
   @ApiBody({ type: ResetPasswordBodyDto })
   @ApiResponse({ status: 200, type: MessageResponseDto })
   @HttpCode(200)
-  @UsePipes(new ZodValidationPipe(resetPasswordRequestSchema))
-  async resetPassword(@Body() body: ResetPasswordRequest) {
+  async resetPassword(@Body(new ZodValidationPipe(resetPasswordRequestSchema)) body: ResetPasswordRequest) {
     await this.auth.resetPassword(body.token, body.newPassword);
     return { message: "Mot de passe reinitialise." };
   }

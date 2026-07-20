@@ -38,23 +38,54 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
+      const body = exception.getResponse();
+      // BUG REEL CORRIGE : quand une HttpException est construite avec un
+      // OBJET enrichi (voir ZodValidationPipe, qui passe
+      // { error: { code, message, details } } pour exposer le detail des
+      // champs invalides), `exception.message` retombe sur le texte
+      // generique par defaut de NestJS ("Bad Request Exception" etc.) —
+      // le corps enrichi n'est accessible que via getResponse(). Toute
+      // erreur de validation de toute l'API perdait donc son detail utile
+      // avant ce correctif (trouve par la CI E2E reelle : un message
+      // generique et non exploitable remontait jusqu'au navigateur).
+      const enrichedError = isEnrichedErrorBody(body) ? body.error : null;
       response.status(status).json({
         error: {
-          code: HttpStatus[status] ?? "HTTP_ERROR",
-          message: exception.message,
+          code: enrichedError?.code ?? (HttpStatus[status] ?? "HTTP_ERROR"),
+          message: enrichedError?.message ?? exception.message,
           correlationId,
+          ...(enrichedError?.details !== undefined ? { details: enrichedError.details } : {}),
         },
       });
       return;
     }
 
-    // Erreur non anticipee : jamais de detail interne renvoye au client.
+    // Erreur non anticipee : jamais de detail interne renvoye au client
+    // EN PRODUCTION. Hors production (dev, CI, validation E2E), le
+    // message reel est inclus pour permettre le diagnostic — sans cela,
+    // toute erreur non geree remonte comme "Une erreur interne est
+    // survenue." sans aucune piste, meme dans les environnements de test.
+    const isProduction = process.env.NODE_ENV === "production";
+    const rawMessage = exception instanceof Error ? exception.message : String(exception);
     response.status(500).json({
       error: {
         code: "INTERNAL_ERROR",
         message: "Une erreur interne est survenue.",
         correlationId,
+        ...(isProduction ? {} : { debugDetail: rawMessage }),
       },
     });
   }
+}
+
+function isEnrichedErrorBody(
+  body: unknown,
+): body is { error: { code?: string; message?: string; details?: unknown } } {
+  return (
+    typeof body === "object" &&
+    body !== null &&
+    "error" in body &&
+    typeof (body as { error: unknown }).error === "object" &&
+    (body as { error: unknown }).error !== null
+  );
 }

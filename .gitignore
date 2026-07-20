@@ -1,5 +1,7 @@
 # Dependances
 node_modules/
+tests/e2e/playwright/playwright-report/
+tests/e2e/playwright/test-results/
 
 # Environnement — .env.example est le seul fichier d'environnement versionne
 .env

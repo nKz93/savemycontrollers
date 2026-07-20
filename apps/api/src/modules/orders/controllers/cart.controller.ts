@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, Res, UseGuards, UsePipes } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Req, Res, UseGuards } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { addCartItemSchema, type AddCartItemRequest, type CartDto } from "@smc/contracts";
@@ -54,8 +54,11 @@ export class CartController {
   @Post(":cartId/items")
   @ApiBody({ type: AddCartItemBodyDto })
   @ApiResponse({ status: 201, type: CartResponseDto })
-  @UsePipes(new ZodValidationPipe(addCartItemSchema))
-  addItemGuest(@Param("cartId") cartId: string, @Body() body: AddCartItemRequest, @Req() req: Request): Promise<CartDto> {
+  addItemGuest(
+    @Param("cartId") cartId: string,
+    @Body(new ZodValidationPipe(addCartItemSchema)) body: AddCartItemRequest,
+    @Req() req: Request,
+  ): Promise<CartDto> {
     const guestTokenRaw = req.cookies?.[GUEST_CART_COOKIE] as string | undefined;
     return this.cart.addItem(cartId, body, { guestTokenRaw });
   }
@@ -64,10 +67,9 @@ export class CartController {
   @UseGuards(JwtAuthGuard)
   @ApiBody({ type: AddCartItemBodyDto })
   @ApiResponse({ status: 201, type: CartResponseDto })
-  @UsePipes(new ZodValidationPipe(addCartItemSchema))
   addItemAuthenticated(
     @Param("cartId") cartId: string,
-    @Body() body: AddCartItemRequest,
+    @Body(new ZodValidationPipe(addCartItemSchema)) body: AddCartItemRequest,
     @CurrentUser() user: RequestWithUser["currentUser"],
   ): Promise<CartDto> {
     return this.cart.addItem(cartId, body, { userId: user!.id });

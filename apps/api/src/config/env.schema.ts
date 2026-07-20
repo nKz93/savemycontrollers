@@ -14,6 +14,13 @@ const baseSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "preprod", "production"]).default("development"),
 
   API_PORT: z.coerce.number().int().min(1).max(65535).default(3001),
+  // Limite globale du ThrottlerGuard (requetes/60s, par IP), en
+  // complement du RedisRateLimitGuard cible par route. Configurable pour
+  // permettre un seuil plus genereux dans l'environnement de validation
+  // E2E (une suite de tests automatisee genere legitimement bien plus de
+  // requetes par seconde qu'un utilisateur reel depuis une seule IP) sans
+  // jamais affaiblir la valeur par defaut en production.
+  THROTTLE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).default(120),
   API_URL: z.string().url(),
   COOKIE_DOMAIN: z.string().optional(),
   CORS_ALLOWED_ORIGINS: z.string().min(1),
@@ -80,6 +87,25 @@ export function validateEnv(rawEnv: NodeJS.ProcessEnv = process.env): AppEnv {
     );
   }
   const env = parsed.data;
+
+  // BUG REEL CORRIGE : verifie DANS TOUS LES ENVIRONNEMENTS (pas
+  // seulement en production) que la cle, si definie, decode bien en
+  // exactement 32 octets (AES-256). Sans cette verification au demarrage,
+  // une cle malformee ne se manifeste QUE lors du premier chiffrement
+  // reel (ex. inscription d'un utilisateur), avec une erreur 500 opaque
+  // ("Invalid key length") au lieu d'un echec de demarrage explicite —
+  // exactement ce qui s'est produit avant ce correctif (voir
+  // .github/workflows/e2e.yml et ci.yml, meme cle placeholder invalide
+  // dans les deux, jamais detectee faute de test exercant ce chemin).
+  if (env.PAYLOAD_ENCRYPTION_KEY) {
+    const decodedLength = Buffer.from(env.PAYLOAD_ENCRYPTION_KEY, "base64").length;
+    if (decodedLength !== 32) {
+      throw new Error(
+        `PAYLOAD_ENCRYPTION_KEY doit decoder en exactement 32 octets (AES-256), pas ${decodedLength}. ` +
+          `Generer une cle valide avec : node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"`,
+      );
+    }
+  }
 
   if (env.NODE_ENV === "production") {
     const errors: string[] = [];

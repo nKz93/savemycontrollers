@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards, UsePipes } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { randomUUID } from "node:crypto";
 import {
@@ -44,10 +44,9 @@ export class RepairCaseController {
   @Patch("staff/repair-cases/:id/status")
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission(PERMISSIONS.REPAIR_CHANGE_STATUS)
-  @UsePipes(new ZodValidationPipe(changeStatusSchema))
   changeStatus(
     @Param("id") id: string,
-    @Body() body: ChangeStatusRequest,
+    @Body(new ZodValidationPipe(changeStatusSchema)) body: ChangeStatusRequest,
     @CurrentUser() user: RequestWithUser["currentUser"],
   ) {
     return this.repairCases.changeStatus(id, body.toStatusKey, { userId: user!.id, correlationId: randomUUID() }, body.comment);
@@ -67,10 +66,9 @@ export class RepairCaseController {
   @Post("staff/repair-cases/:id/internal-notes")
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission(PERMISSIONS.REPAIR_WRITE_INTERNAL_NOTES)
-  @UsePipes(new ZodValidationPipe(addInternalNoteSchema))
   addInternalNote(
     @Param("id") id: string,
-    @Body() body: AddInternalNoteRequest,
+    @Body(new ZodValidationPipe(addInternalNoteSchema)) body: AddInternalNoteRequest,
     @CurrentUser() user: RequestWithUser["currentUser"],
   ) {
     return this.repairCases.addInternalNote(id, user!.id, body.body);
@@ -79,10 +77,9 @@ export class RepairCaseController {
   @Post("staff/repair-cases/:id/client-messages")
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission(PERMISSIONS.ORDER_UPDATE)
-  @UsePipes(new ZodValidationPipe(addClientMessageSchema))
   addClientMessageFromStaff(
     @Param("id") id: string,
-    @Body() body: AddClientMessageRequest,
+    @Body(new ZodValidationPipe(addClientMessageSchema)) body: AddClientMessageRequest,
     @CurrentUser() user: RequestWithUser["currentUser"],
   ) {
     return this.repairCases.addClientMessage(id, user!.id, body.body);
