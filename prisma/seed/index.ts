@@ -85,8 +85,9 @@ async function seedEssentialSettings(): Promise<void> {
 }
 
 async function seedLocalSuperAdmin(): Promise<void> {
-  if (process.env.NODE_ENV === "production") {
-    console.log("NODE_ENV=production : creation du compte super-administrateur de demonstration ignoree.");
+  const shouldSeed = process.env.NODE_ENV !== "production" || process.env.SEED_DEMO_CATALOG === "true";
+  if (!shouldSeed) {
+    console.log("NODE_ENV=production et SEED_DEMO_CATALOG non defini : creation du compte super-administrateur de demonstration ignoree.");
     return;
   }
   const email = process.env.SEED_SUPERADMIN_EMAIL;
@@ -126,10 +127,17 @@ async function main(): Promise<void> {
 
   // Catalogue de demonstration : jamais en production, uniquement local
   // et environnements de validation fonctionnelle (staging/CI E2E).
-  if (process.env.NODE_ENV !== "production") {
+  // Catalogue de demonstration : jamais en production SAUF si
+  // explicitement demande via SEED_DEMO_CATALOG=true — c'est le cas du
+  // staging, qui doit avoir des secrets et un comportement de production
+  // (NODE_ENV=production) tout en conservant des donnees de
+  // demonstration pour la validation fonctionnelle (voir
+  // docker-compose.staging.yml et docs/deployment/staging.md).
+  const shouldSeedDemoCatalog = process.env.NODE_ENV !== "production" || process.env.SEED_DEMO_CATALOG === "true";
+  if (shouldSeedDemoCatalog) {
     await seedCatalogDemo(prisma);
   } else {
-    console.log("NODE_ENV=production : catalogue de demonstration ignore.");
+    console.log("NODE_ENV=production et SEED_DEMO_CATALOG non defini : catalogue de demonstration ignore.");
   }
 }
 

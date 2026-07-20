@@ -3,10 +3,11 @@ node_modules/
 tests/e2e/playwright/playwright-report/
 tests/e2e/playwright/test-results/
 
-# Environnement — .env.example est le seul fichier d'environnement versionne
+# Environnement — seuls les fichiers .example sont versionnes
 .env
 .env.*
 !.env.example
+!.env.staging.example
 
 # Sorties de build (regenerees par la CI/le developpeur, jamais committees)
 dist/
