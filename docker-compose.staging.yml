@@ -1,0 +1,177 @@
+# Staging persistant, deployable sur n'importe quel serveur avec Docker
+# (VPS Hetzner/DigitalOcean/OVH, serveur dedie...). Les images sont
+# construites et publiees vers GitHub Container Registry par
+# .github/workflows/deploy-staging.yml a chaque fusion sur main — ce
+# fichier se contente de les RECUPERER (pull), jamais de les construire
+# sur le serveur lui-meme.
+#
+# Contraintes de securite respectees :
+# - PostgreSQL et Redis n'exposent AUCUN port vers l'hote (uniquement le
+#   reseau interne Docker "backend") : injoignables depuis l'exterieur,
+#   meme par erreur de pare-feu.
+# - Caddy est le SEUL service avec des ports publies (80/443), et
+#   n'expose que l'API (chemins /api/*, /auth/*, /cart/*, etc. — voir
+#   Caddyfile) et apps/web — jamais Postgres/Redis directement.
+# - Aucun secret n'est ecrit ici : tout vient de .env.staging (non
+#   commite, voir .env.staging.example).
+#
+# Redeploiement : voir infra/scripts/deploy-staging.sh (un seul script,
+# reproductible, pas de commandes manuelles a retenir).
+
+name: smc-staging
+
+networks:
+  backend:
+    internal: true # Postgres et Redis : AUCUNE sortie vers l'exterieur, aucune entree publique.
+  internal-api:
+    internal: true # api <-> web uniquement : web n'a JAMAIS acces a postgres/redis, meme en interne.
+  edge:
+    internal: false # Seul Caddy a des ports publies ; api et web y sont pour etre atteints par Caddy.
+
+volumes:
+  postgres-data:
+  redis-data:
+  caddy-data:
+  caddy-config:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    networks: [backend]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:-smc_staging}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:?} -d ${POSTGRES_DB:-smc_staging}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    # Volontairement AUCUN "ports:" ici : accessible uniquement depuis le
+    # reseau interne "backend" (api, worker).
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks: [backend]
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?}", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    # Volontairement AUCUN "ports:" ici non plus.
+
+  migrate:
+    image: ${IMAGE_REGISTRY:?}/smc-api:${IMAGE_TAG:-latest}
+    networks: [backend]
+    env_file: .env.staging
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-smc_staging}?schema=public
+    depends_on:
+      postgres: { condition: service_healthy }
+    # Applique les migrations PUIS seed (permissions/roles + catalogue de
+    # demonstration via SEED_DEMO_CATALOG=true, voir .env.staging.example),
+    # puis s'arrete (pas un service permanent). Le seed s'execute via tsx
+    # (pas de fichier .js precompile — voir packages/database/package.json).
+    command: ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema=prisma/schema.prisma && node_modules/.bin/tsx prisma/seed/index.ts"]
+    restart: "no"
+
+  api:
+    image: ${IMAGE_REGISTRY:?}/smc-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    networks: [backend, internal-api, edge]
+    env_file: .env.staging
+    environment:
+      NODE_ENV: staging
+      DATABASE_URL: postgresql://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-smc_staging}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+      # Le staging est servi derriere Caddy (reverse proxy) : un seul
+      # "hop" de proxy de confiance (voir Caddyfile).
+      TRUSTED_PROXY_COUNT: "1"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+  worker:
+    image: ${IMAGE_REGISTRY:?}/smc-worker:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    networks: [backend]
+    env_file: .env.staging
+    environment:
+      NODE_ENV: staging
+      DATABASE_URL: postgresql://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-smc_staging}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+  web:
+    image: ${IMAGE_REGISTRY:?}/smc-web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    networks: [internal-api, edge]
+    environment:
+      NODE_ENV: staging
+      PORT: "3000"
+      # Composants serveur (Server Components) : passent par le reseau
+      # Docker interne, direct vers l'API — plus rapide et n'a pas besoin
+      # de sortir vers Internet. Distinct de NEXT_PUBLIC_API_URL
+      # (navigateur), qui lui est deja fige DANS LE BUNDLE au moment du
+      # build de l'image (voir Dockerfile ARG) — le definir ici n'aurait
+      # aucun effet sur le code cote navigateur, uniquement cote serveur.
+      API_URL: http://api:3001
+    depends_on:
+      api: { condition: service_healthy }
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    networks: [edge]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      STAGING_DOMAIN: ${STAGING_DOMAIN:?}
+      API_DOMAIN: ${API_DOMAIN:?}
+      # Optionnel : protection par mot de passe de l'ensemble du staging
+      # (voir Caddyfile) — laisser vide pour un acces public sans mot de
+      # passe.
+      STAGING_BASIC_AUTH_USER: ${STAGING_BASIC_AUTH_USER:-}
+      STAGING_BASIC_AUTH_HASH: ${STAGING_BASIC_AUTH_HASH:-}
+    depends_on:
+      web: { condition: service_started }
+      api: { condition: service_healthy }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

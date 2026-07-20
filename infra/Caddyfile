@@ -1,0 +1,34 @@
+# Reverse proxy avec HTTPS automatique (Let's Encrypt, renouvellement
+# automatique par Caddy — aucune configuration manuelle de certificat).
+# Deux domaines/sous-domaines distincts : {$STAGING_DOMAIN} pour
+# apps/web, {$API_DOMAIN} pour l'API (necessaire pour que les cookies de
+# session cote navigateur fonctionnent correctement avec des domaines
+# separes — voir CORS_ALLOWED_ORIGINS dans .env.staging.example).
+
+{$API_DOMAIN} {
+	reverse_proxy api:3001
+	encode gzip
+	log {
+		output stdout
+		format json
+	}
+}
+
+{$STAGING_DOMAIN} {
+	# Protection optionnelle par mot de passe de l'ensemble du staging
+	# ("acces staging protege si necessaire" — active en decommentant les
+	# 2 lignes ci-dessous et en definissant STAGING_BASIC_AUTH_USER /
+	# STAGING_BASIC_AUTH_HASH dans .env.staging. Genere le hash avec :
+	# docker run --rm caddy:2-alpine caddy hash-password --plaintext 'votre-mot-de-passe'
+	#
+	# basic_auth {
+	# 	{$STAGING_BASIC_AUTH_USER} {$STAGING_BASIC_AUTH_HASH}
+	# }
+
+	reverse_proxy web:3000
+	encode gzip
+	log {
+		output stdout
+		format json
+	}
+}
