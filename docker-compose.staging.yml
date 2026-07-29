@@ -74,7 +74,7 @@ services:
     # Volontairement AUCUN "ports:" ici non plus.
 
   migrate:
-    image: ${IMAGE_REGISTRY:?}/smc-api:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:?}-api:${IMAGE_TAG:-latest}
     networks: [backend]
     env_file: .env.staging
     environment:
@@ -89,7 +89,7 @@ services:
     restart: "no"
 
   api:
-    image: ${IMAGE_REGISTRY:?}/smc-api:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:?}-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
     networks: [backend, internal-api, edge]
     env_file: .env.staging
@@ -114,7 +114,7 @@ services:
       options: { max-size: "20m", max-file: "5" }
 
   worker:
-    image: ${IMAGE_REGISTRY:?}/smc-worker:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:?}-worker:${IMAGE_TAG:-latest}
     restart: unless-stopped
     networks: [backend]
     env_file: .env.staging
@@ -131,7 +131,7 @@ services:
       options: { max-size: "20m", max-file: "5" }
 
   web:
-    image: ${IMAGE_REGISTRY:?}/smc-web:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:?}-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
     networks: [internal-api, edge]
     environment:

@@ -26,6 +26,14 @@ RUN pnpm --filter @smc/database generate
 RUN pnpm turbo run build --filter=@smc/api...
 
 FROM node:20-alpine AS runtime
+# BUG REEL CORRIGE : sans openssl installe, Prisma ne detecte pas la
+# version libssl disponible sur Alpine (musl) et tente de telecharger/
+# ecrire un moteur de secours dans node_modules au demarrage — ce qui
+# echoue puisque le conteneur tourne avec l'utilisateur non-root 'smc'
+# (permissions en lecture seule). Trouve en deployant reellement
+# (Coolify) : "Error: Can't write to .../@prisma/engines please make
+# sure you install 'prisma' with the right permissions."
+RUN apk add --no-cache openssl
 RUN corepack enable && addgroup -S smc && adduser -S smc -G smc
 WORKDIR /app
 ENV NODE_ENV=production
