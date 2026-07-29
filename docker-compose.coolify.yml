@@ -56,7 +56,7 @@ services:
       retries: 10
 
   migrate:
-    image: ${IMAGE_REGISTRY:?}/smc-api:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:?}-api:${IMAGE_TAG:-latest}
     networks: [backend]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-smc_staging}?schema=public
@@ -71,7 +71,7 @@ services:
     restart: "no"
 
   api:
-    image: ${IMAGE_REGISTRY:?}/smc-api:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:?}-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
     networks: [backend, internal-api]
     # Port interne expose au proxy de Coolify (PAS publie sur l'hote :
@@ -112,7 +112,7 @@ services:
       retries: 5
 
   worker:
-    image: ${IMAGE_REGISTRY:?}/smc-worker:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:?}-worker:${IMAGE_TAG:-latest}
     restart: unless-stopped
     networks: [backend]
     environment:
@@ -128,7 +128,7 @@ services:
       migrate: { condition: service_completed_successfully }
 
   web:
-    image: ${IMAGE_REGISTRY:?}/smc-web:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:?}-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
     networks: [internal-api]
     expose: ["3000"]

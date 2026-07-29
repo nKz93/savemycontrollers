@@ -23,6 +23,11 @@ RUN pnpm --filter @smc/database generate
 RUN pnpm turbo run build --filter=@smc/worker...
 
 FROM node:20-alpine AS runtime
+# Meme correctif que infra/docker/api/Dockerfile : openssl requis pour
+# que Prisma detecte correctement libssl sur Alpine (musl), sinon
+# tentative d'ecriture dans node_modules refusee par l'utilisateur
+# non-root.
+RUN apk add --no-cache openssl
 RUN corepack enable && addgroup -S smc && adduser -S smc -G smc
 WORKDIR /app
 ENV NODE_ENV=production
