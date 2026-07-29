@@ -11,6 +11,7 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
+RUN pnpm --filter @smc/database generate
 # NEXT_PUBLIC_API_URL doit etre connu AU BUILD (Next.js l'inline dans le
 # bundle navigateur a la compilation, pas a l'execution du conteneur) —
 # voir .github/workflows/deploy-staging.yml qui le fournit comme

@@ -1,6 +1,4 @@
 # syntax=docker/dockerfile:1
-# Meme remarque que infra/docker/api/Dockerfile concernant le blocage
-# Prisma dans cet environnement de generation.
 
 FROM node:20-alpine AS base
 RUN corepack enable
@@ -14,6 +12,14 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
+# BUG REEL CORRIGE : sans prisma generate ici, @prisma/client n'a pas de
+# types generes — Prisma.TransactionClient (utilise dans
+# packages/database/src/outbox-claim.ts) retombe alors sur `any` en
+# cascade, et tsup --dts echoue avec "implicitly has an 'any' type"
+# (TS7006) en mode strict. Jamais detecte par la CI habituelle (qui,
+# elle, genere reellement le client avant le build) — revele uniquement
+# par un vrai build Docker independant.
+RUN pnpm --filter @smc/database generate
 RUN pnpm turbo run build --filter=@smc/worker...
 
 FROM node:20-alpine AS runtime

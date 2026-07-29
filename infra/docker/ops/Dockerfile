@@ -11,6 +11,7 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
+RUN pnpm --filter @smc/database generate
 RUN pnpm turbo run build --filter=@smc/ops...
 
 FROM node:20-alpine AS runtime
