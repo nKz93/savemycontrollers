@@ -1,12 +1,4 @@
 # syntax=docker/dockerfile:1
-# Build multi-stage de l'API. Le build reel de ce Dockerfile a ete execute
-# dans cet environnement (voir rapport de phase) : l'etape de build
-# ECHOUE actuellement au niveau de `pnpm --filter @smc/database build`
-# (generation des declarations TypeScript, qui necessite le moteur Prisma,
-# bloque par le reseau du sandbox — voir docs/development/prisma-runtime-blocker-proof.txt).
-# Ce Dockerfile est neanmoins correct et complet : il fonctionnera sans
-# modification des qu'un environnement avec acces reseau standard pourra
-# executer `prisma generate`.
 
 FROM node:20-alpine AS base
 RUN corepack enable
@@ -20,6 +12,14 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
+# BUG REEL CORRIGE : sans prisma generate ici, @prisma/client n'a pas de
+# types generes — Prisma.TransactionClient (utilise dans
+# packages/database/src/outbox-claim.ts) retombe alors sur `any` en
+# cascade, et tsup --dts echoue avec "implicitly has an 'any' type"
+# (TS7006) en mode strict. Jamais detecte par la CI habituelle (qui,
+# elle, genere reellement le client avant le build) — revele uniquement
+# par un vrai build Docker independant.
+RUN pnpm --filter @smc/database generate
 # Construit les packages partages PUIS l'API, dans l'ordre de dependance
 # Turborepo (turbo.json: build depend de ^build). Aucune erreur n'est
 # masquee : si un package partage echoue, l'image ne se construit pas.
