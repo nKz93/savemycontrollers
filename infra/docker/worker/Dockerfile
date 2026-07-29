@@ -31,10 +31,10 @@ RUN apk add --no-cache openssl
 RUN corepack enable && addgroup -S smc && adduser -S smc -G smc
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=build /repo/apps/worker/dist ./dist
-COPY --from=build /repo/apps/worker/package.json ./package.json
-COPY --from=build /repo/node_modules ./node_modules
-COPY --from=build /repo/packages ./packages
+COPY --from=build --chown=smc:smc /repo/apps/worker/dist ./dist
+COPY --from=build --chown=smc:smc /repo/apps/worker/package.json ./package.json
+COPY --from=build --chown=smc:smc /repo/node_modules ./node_modules
+COPY --from=build --chown=smc:smc /repo/packages ./packages
 USER smc
 STOPSIGNAL SIGTERM
 CMD ["node", "dist/main.js"]

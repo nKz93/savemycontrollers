@@ -26,13 +26,9 @@ RUN pnpm --filter @smc/database generate
 RUN pnpm turbo run build --filter=@smc/api...
 
 FROM node:20-alpine AS runtime
-# BUG REEL CORRIGE : sans openssl installe, Prisma ne detecte pas la
-# version libssl disponible sur Alpine (musl) et tente de telecharger/
-# ecrire un moteur de secours dans node_modules au demarrage — ce qui
-# echoue puisque le conteneur tourne avec l'utilisateur non-root 'smc'
-# (permissions en lecture seule). Trouve en deployant reellement
-# (Coolify) : "Error: Can't write to .../@prisma/engines please make
-# sure you install 'prisma' with the right permissions."
+# BUG REEL CORRIGE (1/2) : sans openssl installe, Prisma ne detecte pas
+# la version libssl disponible sur Alpine (musl) — corrige, mais un
+# second probleme persistait meme apres correction.
 RUN apk add --no-cache openssl
 RUN corepack enable && addgroup -S smc && adduser -S smc -G smc
 WORKDIR /app
@@ -40,11 +36,20 @@ ENV NODE_ENV=production
 # Les migrations Prisma NE SONT PAS executees ici : elles doivent l'etre
 # separement, avant le demarrage de ce conteneur (voir
 # infra/scripts/reset-local-env.sh ou une etape dediee de deploiement).
-COPY --from=build /repo/apps/api/dist ./dist
-COPY --from=build /repo/apps/api/package.json ./package.json
-COPY --from=build /repo/node_modules ./node_modules
-COPY --from=build /repo/packages ./packages
-COPY --from=build /repo/prisma ./prisma
+# BUG REEL CORRIGE (2/2) : meme apres le correctif openssl, Prisma
+# echoue encore avec "Can't write to .../@prisma/engines" — les fichiers
+# copies depuis le stage de build restent proprietaires de root, et
+# Prisma a besoin d'ecrire un fichier de verrou/cache dans son propre
+# repertoire node_modules a certaines operations (ex. migrate deploy),
+# quelle que soit la detection openssl. --chown transfere la propriete a
+# l'utilisateur non-root des la copie, sans etape supplementaire ni
+# doublement de la taille de l'image (contrairement a un `RUN chown -R`
+# separe apres COPY).
+COPY --from=build --chown=smc:smc /repo/apps/api/dist ./dist
+COPY --from=build --chown=smc:smc /repo/apps/api/package.json ./package.json
+COPY --from=build --chown=smc:smc /repo/node_modules ./node_modules
+COPY --from=build --chown=smc:smc /repo/packages ./packages
+COPY --from=build --chown=smc:smc /repo/prisma ./prisma
 USER smc
 EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
